@@ -198,7 +198,7 @@ function renderHome() {
       <div class="stat"><div class="num">${stats.streak}</div><div class="lbl">Streak</div></div>
       <div class="stat"><div class="num">${stats.rank}</div><div class="lbl">Rank</div></div>
     </div>
-    ${renderTabBar('home')}
+    ${renderLegalFooter()}${renderTabBar('home')}
   </div>`;
 }
 
@@ -252,7 +252,7 @@ function renderChallenge() {
             <span class="time">${formatTime(e.score_seconds)}</span>
           </div>`).join('')}
     </div>
-    ${renderTabBar('challenge')}
+    ${renderLegalFooter()}${renderTabBar('challenge')}
   </div>`;
 }
 
@@ -293,7 +293,19 @@ function renderProfile() {
       <div class="stat"><div class="num">${stats.streak}</div><div class="lbl">Streak</div></div>
     </div>
     <button class="btn ghost mt" data-action="signout">Sign Out</button>
-    ${renderTabBar('profile')}
+    ${renderLegalFooter()}${renderTabBar('profile')}
+  </div>`;
+}
+
+
+function renderLegalFooter() {
+  return `<div class="legal-footer">
+    <div>
+      <a href="/legal/privacy.html">Privacy</a> ·
+      <a href="/legal/terms.html">Terms</a> ·
+      <a href="/legal/disclaimer.html">Disclaimer</a>
+    </div>
+    <div style="margin-top:8px">© 2026 Vyrn · Independent original product</div>
   </div>`;
 }
 
