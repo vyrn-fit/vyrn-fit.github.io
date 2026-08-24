@@ -1,0 +1,30 @@
+{
+  "expo": {
+    "name": "Vyrn",
+    "slug": "vyrn",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "scheme": "vyrn",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.vyrn.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#0a0a0a",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "package": "com.vyrn.app"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-router"
+    ]
+  }
+}
