@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0a0a0a" />
+  <meta name="description" content="Vyrn — Show up. Put in the work. Equipment-free training + weekly challenges." />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Vyrn" />
+  <link rel="manifest" href="/public/manifest.json" />
+  <link rel="icon" href="/assets/favicon.png" />
+  <title>Vyrn — Show up. Put in the work.</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      height: 100%;
+      background: #0a0a0a;
+      color: #fff;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    body {
+      display: flex;
+      flex-direction: column;
+      min-height: 100dvh;
+      padding: 0 24px;
+      background: radial-gradient(ellipse at top, #111 0%, #0a0a0a 70%);
+    }
+    .nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 0;
+      max-width: 960px;
+      margin: 0 auto;
+      width: 100%;
+    }
+    .logo {
+      font-size: 22px;
+      font-weight: 900;
+      letter-spacing: 4px;
+    }
+    .nav-link {
+      color: #a3a3a3;
+      text-decoration: none;
+      font-size: 15px;
+    }
+    .hero {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      max-width: 640px;
+      margin: 0 auto;
+      padding: 40px 0 60px;
+    }
+    .badge {
+      display: inline-block;
+      background: #171717;
+      border: 1px solid #262626;
+      color: #22c55e;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 6px 14px;
+      border-radius: 999px;
+      margin-bottom: 28px;
+    }
+    h1 {
+      font-size: clamp(40px, 10vw, 64px);
+      font-weight: 900;
+      letter-spacing: -1px;
+      line-height: 1.05;
+      margin-bottom: 16px;
+    }
+    .tagline {
+      font-size: 20px;
+      color: #a3a3a3;
+      margin-bottom: 12px;
+    }
+    .desc {
+      font-size: 16px;
+      color: #737373;
+      line-height: 1.5;
+      max-width: 420px;
+      margin-bottom: 40px;
+    }
+    .cta {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      width: 100%;
+      max-width: 320px;
+    }
+    .btn {
+      display: block;
+      text-align: center;
+      text-decoration: none;
+      padding: 16px 24px;
+      border-radius: 12px;
+      font-size: 17px;
+      font-weight: 700;
+      transition: transform 0.15s, opacity 0.15s;
+    }
+    .btn:active { transform: scale(0.98); }
+    .btn-primary {
+      background: #22c55e;
+      color: #000;
+    }
+    .btn-secondary {
+      background: transparent;
+      color: #a3a3a3;
+      border: 1px solid #404040;
+    }
+    .features {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 16px;
+      max-width: 960px;
+      margin: 0 auto 60px;
+      width: 100%;
+    }
+    @media (min-width: 640px) {
+      .features { grid-template-columns: repeat(3, 1fr); }
+      .cta { flex-direction: row; max-width: none; justify-content: center; }
+      .btn { min-width: 180px; }
+    }
+    .feature {
+      background: #171717;
+      border: 1px solid #262626;
+      border-radius: 16px;
+      padding: 24px;
+    }
+    .feature h3 {
+      font-size: 17px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .feature p {
+      font-size: 14px;
+      color: #a3a3a3;
+      line-height: 1.45;
+    }
+    .footer {
+      text-align: center;
+      padding: 24px 0 40px;
+      color: #525252;
+      font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+  <nav class="nav">
+    <div class="logo">VYRN</div>
+    <a class="nav-link" href="https://github.com/vyrn-fit/vyrn-fit.github.io">GitHub</a>
+  </nav>
+
+  <main class="hero">
+    <div class="badge">Coming soon • PWA + Mobile</div>
+    <h1>Vyrn</h1>
+    <p class="tagline">Show up. Put in the work.</p>
+    <p class="desc">
+      Equipment-free training you can do at home or in the office, plus weekly Hyrox-style challenges with real competition.
+    </p>
+    <div class="cta">
+      <a class="btn btn-primary" href="#waitlist">Join the waitlist</a>
+      <a class="btn btn-secondary" href="https://github.com/vyrn-fit/vyrn-fit.github.io">View progress</a>
+    </div>
+  </main>
+
+  <section class="features">
+    <div class="feature">
+      <h3>No equipment</h3>
+      <p>Bodyweight sessions designed for home, office, or travel. Just show up.</p>
+    </div>
+    <div class="feature">
+      <h3>Weekly challenges</h3>
+      <p>Hyrox-inspired circuits. Compete on leaderboards. Optional video verification.</p>
+    </div>
+    <div class="feature">
+      <h3>Built for consistency</h3>
+      <p>Short, effective workouts + social accountability so you actually keep going.</p>
+    </div>
+  </section>
+
+  <footer class="footer">
+    © 2026 Vyrn • Built with Expo + Supabase
+  </footer>
+
+  <script>
+    // Simple waitlist placeholder
+    document.querySelector('a[href="#waitlist"]')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      alert('Waitlist coming soon. Follow the GitHub repo for updates.');
+    });
+  </script>
+</body>
+</html>
