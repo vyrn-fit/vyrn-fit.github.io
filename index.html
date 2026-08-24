@@ -123,6 +123,36 @@
       font-family: inherit;
     }
     .tab.active { color: var(--green); }
+
+    .list-btn {
+      display: flex; justify-content: space-between; align-items: center;
+      width: 100%; text-align: left; background: none; border: none;
+      color: var(--text); padding: 12px 0; cursor: pointer; font-family: inherit;
+      border-bottom: 1px solid var(--border); font-size: 15px;
+    }
+    .list-btn:last-child { border-bottom: none; }
+    .chev { color: var(--dim); font-size: 18px; }
+    .pro-tag {
+      display: inline-block; background: #22c55e22; color: var(--green);
+      font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px;
+      vertical-align: middle;
+    }
+    .badge {
+      background: var(--card); border: 1px solid var(--border); color: var(--muted);
+      font-size: 11px; padding: 4px 10px; border-radius: 999px;
+    }
+    .section { font-size: 13px; color: var(--dim); text-transform: uppercase;
+      letter-spacing: 0.5px; margin: 20px 0 8px; }
+    .card.tight-pad { padding: 8px 14px; }
+    .card.highlight { border-color: #22c55e55; }
+    .progress-bar {
+      width: 100%; max-width: 280px; height: 6px; background: var(--border);
+      border-radius: 3px; margin: 20px auto; overflow: hidden;
+    }
+    .progress-fill { height: 100%; background: var(--green); transition: width 0.3s; }
+    .better { color: #22c55e; font-size: 12px; font-weight: 600; }
+    .slower { color: #f59e0b; font-size: 12px; font-weight: 600; }
+
     .legal-footer {
       text-align: center; padding: 24px 12px 120px; font-size: 12px; color: #525252;
     }
