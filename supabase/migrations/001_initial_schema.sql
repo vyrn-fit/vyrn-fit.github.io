@@ -99,7 +99,7 @@ create trigger on_auth_user_created
 insert into public.challenges (title, description, start_date, end_date, exercise_list, is_active)
 values (
   'Forge Circuit #1',
-  'Hyrox-style bodyweight circuit. Complete for time. Lower time ranks higher.',
+  'Timed bodyweight circuit. Complete for time. Lower time ranks higher.',
   now() - interval '1 day',
   now() + interval '6 days',
   '[

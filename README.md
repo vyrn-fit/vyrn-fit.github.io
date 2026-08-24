@@ -2,7 +2,7 @@
 
 **Show up. Put in the work.**
 
-Vyrn is a social, equipment-free fitness app focused on home and office bodyweight training with weekly Hyrox-style challenges.
+Vyrn is a social, equipment-free fitness app focused on home and office bodyweight training with weekly competitive challenges.
 
 ## Current Goal
 Mobile-ready **Progressive Web App (PWA)** first.  

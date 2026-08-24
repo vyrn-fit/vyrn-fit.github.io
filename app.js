@@ -24,7 +24,7 @@ const store = {
 const DEFAULT_CHALLENGE = {
   id: 'local-1',
   title: 'Forge Circuit #1',
-  description: 'Hyrox-style bodyweight circuit. Complete for time.',
+  description: 'Timed bodyweight circuit. Complete for time.',
   exercises: [
     { name: 'Air Squats', reps: 40 },
     { name: 'Push-ups', reps: 30 },
