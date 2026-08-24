@@ -218,9 +218,17 @@ async function init() {
     const { data: { session } } = await supabaseClient.auth.getSession();
     if (session) {
       currentUser = session.user;
+      if (currentUser?.email && currentUser.email.toLowerCase().includes('pro')) {
+        isPro = true;
+        store.set('isPro', true);
+      }
     }
     supabaseClient.auth.onAuthStateChange((_e, s) => {
       currentUser = s?.user || null;
+      if (currentUser?.email && currentUser.email.toLowerCase().includes('pro')) {
+        isPro = true;
+        store.set('isPro', true);
+      }
       if (currentScreen !== 'workoutRun') render();
     });
   }
@@ -306,6 +314,9 @@ function renderLogin() {
       <input id="password" type="password" placeholder="Password (min 6)" autocomplete="current-password" />
       <button class="btn primary" data-action="signin">Sign In</button>
       <button class="btn secondary" data-action="signup">Create Account</button>
+      <p class="muted" style="margin:12px 0 4px;font-size:12px">Quick test accounts</p>
+      <button class="btn secondary" data-action="demo-free">Demo Free user</button>
+      <button class="btn secondary" data-action="demo-pro">Demo Pro user</button>
       <button class="btn ghost" data-go="welcome">← Back</button>
     </div>
     <p id="auth-msg" class="msg"></p>
@@ -597,6 +608,26 @@ async function handleAction(action) {
   if (action === 'guest') {
     store.set('guest', { email: 'guest@vyrn.app' });
     currentUser = { id: 'guest', email: 'guest@vyrn.app', isGuest: true };
+    isPro = false;
+    store.set('isPro', false);
+    navigate('home');
+    return;
+  }
+
+  if (action === 'demo-free') {
+    store.set('guest', { email: 'free@vyrn.demo' });
+    currentUser = { id: 'demo-free', email: 'free@vyrn.demo', isGuest: true };
+    isPro = false;
+    store.set('isPro', false);
+    navigate('home');
+    return;
+  }
+
+  if (action === 'demo-pro') {
+    store.set('guest', { email: 'pro@vyrn.demo' });
+    currentUser = { id: 'demo-pro', email: 'pro@vyrn.demo', isGuest: true };
+    isPro = true;
+    store.set('isPro', true);
     navigate('home');
     return;
   }
