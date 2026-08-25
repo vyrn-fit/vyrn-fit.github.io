@@ -50,10 +50,10 @@ function photoKey(name) {
   return 'default';
 }
 function photoUrl(name) {
-  return '/assets/exercises/' + photoKey(name) + '.jpg?v=16';
+  return '/assets/exercises/' + photoKey(name) + '.jpg?v=17';
 }
 function videoUrl(name) {
-  return '/assets/videos/' + photoKey(name) + '.mp4?v=1';
+  return '/assets/videos/' + photoKey(name) + '.mp4?v=2';
 }
 function iconFor(name) {
   return `<img class="photo-thumb" src="${photoUrl(name)}" alt="" loading="lazy" />`;
@@ -517,6 +517,10 @@ function render() {
   };
   app.innerHTML = (map[currentScreen] || renderWelcome)();
   bindEvents();
+  // Autoplay exercise loops (muted required by browsers)
+  document.querySelectorAll('video.ex-video').forEach(v => {
+    v.play().catch(() => {});
+  });
 }
 
 function renderLegalFooter() {
