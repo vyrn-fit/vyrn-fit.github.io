@@ -691,7 +691,7 @@ function renderWorkoutRun() {
     <div class="ex-stage ${phase}">
       <div class="ex-icon-lg ${phase === 'work' ? 'bounce' : ''}">${ico}</div>
     </div>
-    <div class="timer-display big" id="phase-timer">${formatTime(phaseSeconds)}</div>
+    <div class="timer-display big${phaseSeconds <= 5 && phase !== 'ready' && phase !== 'done' ? ' urgent' : ''}" id="phase-timer">${formatTime(phaseSeconds)}</div>
     <h2 id="phase-label">${label}</h2>
     <p class="muted" id="phase-hint">${phase === 'work' ? 'Keep moving' : phase === 'rest' ? 'Breathe' : phase === 'done' ? 'Nice work' : 'Voice + sound on by default'}</p>
     <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
@@ -854,7 +854,11 @@ function startPhaseTimer() {
     phaseSeconds--;
     totalSeconds++;
     const el = $('#phase-timer');
-    if (el) el.textContent = formatTime(Math.max(0, phaseSeconds));
+    if (el) {
+      el.textContent = formatTime(Math.max(0, phaseSeconds));
+      if (phaseSeconds <= 5 && phase !== 'ready' && phase !== 'done') el.classList.add('urgent');
+      else el.classList.remove('urgent');
+    }
     if (phaseSeconds === 3 || phaseSeconds === 2 || phaseSeconds === 1) sfxTick();
     if (phaseSeconds <= 0) advancePhase();
   }, 1000);
