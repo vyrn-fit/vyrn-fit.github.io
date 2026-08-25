@@ -14,6 +14,7 @@ let tickTimer = null;
 let isPro = false;
 let voiceEnabled = true;
 let sfxEnabled = true;
+let musicHintDismissed = false;
 let audioCtx = null;
 
 const store = {
@@ -335,6 +336,29 @@ function speak(text) {
   } catch (_) {}
 }
 
+
+function renderMusicBar(compact) {
+  const spotifyUrl = 'https://open.spotify.com/search/workout%20focus';
+  const appleUrl = 'https://music.apple.com/search?term=workout';
+  if (compact) {
+    return `<div class="music-bar compact">
+      <span class="music-label">Music</span>
+      <a class="music-chip" href="${spotifyUrl}" target="_blank" rel="noopener">Spotify</a>
+      <a class="music-chip" href="${appleUrl}" target="_blank" rel="noopener">Apple Music</a>
+    </div>`;
+  }
+  return `<div class="music-card">
+    <h3>Soundtrack</h3>
+    <p class="muted mb">Play your own music in the background — works great with headphones.</p>
+    <div class="music-actions">
+      <a class="btn secondary music-link" href="${spotifyUrl}" target="_blank" rel="noopener">Open Spotify</a>
+      <a class="btn secondary music-link" href="${appleUrl}" target="_blank" rel="noopener">Open Apple Music</a>
+    </div>
+    <p class="music-tip muted">Tip: start a playlist, return here, then hit Begin. Voice cues stay on top.</p>
+  </div>`;
+}
+
+
 // —— Helpers ——
 function $(sel) { return document.querySelector(sel); }
 function $all(sel) { return document.querySelectorAll(sel); }
@@ -400,6 +424,7 @@ async function init() {
   isPro = !!store.get('isPro');
   voiceEnabled = store.get('voiceEnabled') !== false;
   sfxEnabled = store.get('sfxEnabled') !== false;
+  musicHintDismissed = !!store.get('musicHintDismissed');
 
   if (window.supabase) {
     supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -603,6 +628,7 @@ function renderWorkoutDetail() {
         </div>
       `).join('')}
     </div>
+    ${renderMusicBar(false)}
     ${locked
       ? `<button class="btn primary" data-action="upgrade">Unlock with Pro</button>
          <p class="muted center mt">Pro unlocks full library + longer history</p>`
@@ -631,6 +657,7 @@ function renderWorkoutRun() {
     <h2 id="phase-label">${label}</h2>
     <p class="muted" id="phase-hint">${phase === 'work' ? 'Keep moving' : phase === 'rest' ? 'Breathe' : phase === 'done' ? 'Nice work' : 'Voice + sound on by default'}</p>
     <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
+    ${phase === 'ready' ? renderMusicBar(true) : ''}
     <div class="btn-stack">
       ${phase === 'ready' ? `<button class="btn primary" data-action="begin-timer">Begin</button>` : ''}
       ${phase === 'done' ? `<button class="btn primary" data-action="save-session">Save & finish</button>` : ''}
@@ -756,6 +783,11 @@ function renderProfile() {
       <div class="toggle-row">
         <span>Sound effects</span>
         <button class="toggle ${sfxEnabled?'on':''}" data-action="toggle-sfx">${sfxEnabled?'On':'Off'}</button>
+      </div>
+      <p class="muted" style="margin-top:12px;font-size:13px">Music: use Spotify or Apple Music in the background. Deep in-app integrate comes next.</p>
+      <div class="music-actions" style="margin-top:10px">
+        <a class="btn secondary music-link" href="https://open.spotify.com/search/workout%20focus" target="_blank" rel="noopener">Spotify</a>
+        <a class="btn secondary music-link" href="https://music.apple.com/search?term=workout" target="_blank" rel="noopener">Apple Music</a>
       </div>
     </div>
     <div class="stats mt">

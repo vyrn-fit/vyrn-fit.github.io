@@ -851,6 +851,30 @@
       }
     }
 
+  
+    .music-card {
+      background: var(--card); border: 1px solid var(--border); border-radius: 16px;
+      padding: 16px; margin: 16px 0; text-align: left;
+    }
+    .music-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+    .music-link {
+      width: auto !important; flex: 1; min-width: 120px; text-decoration: none;
+      padding: 12px 14px !important; font-size: 14px !important;
+    }
+    .music-tip { font-size: 12px; margin-top: 12px; line-height: 1.4; }
+    .music-bar {
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      flex-wrap: wrap; margin: 12px 0 4px; width: 100%; max-width: 320px;
+    }
+    .music-bar.compact { margin-bottom: 8px; }
+    .music-label { font-size: 12px; color: var(--dim); text-transform: uppercase; letter-spacing: 0.5px; }
+    .music-chip {
+      font-size: 13px; font-weight: 600; color: #fff; text-decoration: none;
+      background: #1a1a1a; border: 1px solid var(--border); border-radius: 999px;
+      padding: 8px 14px;
+    }
+    .music-chip:hover { border-color: #ff3b2f66; color: #ff6b35; }
+
   </style>
   <script>
     (function () {
