@@ -9,7 +9,9 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Vyrn" />
   <link rel="manifest" href="/manifest.json" />
-  <link rel="icon" href="/assets/favicon.png" />
+  <link rel="icon" href="/assets/favicon.png" sizes="32x32" />
+  <link rel="icon" href="/assets/icon.png" sizes="512x512" type="image/png" />
+  <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png" />
   <title>Vyrn</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
@@ -37,6 +39,185 @@
     #app { min-height: 100dvh; margin: 0 auto; position: relative; width: 100%; }
     html.mode-app #app { max-width: 480px; }
     html.mode-web #app { max-width: none; }
+
+    /* —— Full-bleed browser website —— */
+    html.mode-web body {
+      background: #050505;
+    }
+    html.mode-web #app {
+      max-width: none !important;
+      width: 100%;
+    }
+    html.mode-web .site {
+      width: 100%;
+      max-width: none;
+      padding: 0;
+      margin: 0;
+    }
+    html.mode-web .site-inner {
+      width: 100%;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 48px;
+      box-sizing: border-box;
+    }
+    html.mode-web .site-nav-wrap {
+      width: 100%;
+      border-bottom: 1px solid #1a1a1a;
+      background: rgba(5,5,5,0.85);
+      backdrop-filter: blur(16px);
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+    html.mode-web .site-nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 0;
+      max-width: 1200px;
+      margin: 0 auto;
+      width: 100%;
+      box-sizing: border-box;
+      padding-left: 48px;
+      padding-right: 48px;
+    }
+    html.mode-web .site-nav-logo {
+      height: 44px;
+      width: auto;
+      border-radius: 10px;
+    }
+    html.mode-web .site-nav-links {
+      display: flex;
+      gap: 28px;
+      align-items: center;
+      font-size: 15px;
+    }
+    html.mode-web .site-hero-wrap {
+      width: 100%;
+      background: radial-gradient(ellipse 80% 60% at 15% 50%, #4a120c 0%, #0a0505 55%, #050505 100%);
+    }
+    html.mode-web .site-hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 64px;
+      align-items: center;
+      text-align: left;
+      padding: 80px 48px;
+      max-width: 1200px;
+      margin: 0 auto;
+      width: 100%;
+      box-sizing: border-box;
+      background: none;
+    }
+    html.mode-web .site-hero-copy { order: 1; min-width: 0; }
+    html.mode-web .site-hero-logo {
+      order: 2;
+      width: 100%;
+      max-width: 480px;
+      margin: 0 0 0 auto;
+      border-radius: 24px;
+      box-shadow: 0 24px 80px rgba(255, 59, 47, 0.28);
+    }
+    html.mode-web .site-title {
+      font-size: clamp(42px, 5.5vw, 64px);
+      font-weight: 900;
+      line-height: 1.02;
+      margin-bottom: 20px;
+      letter-spacing: -1.5px;
+    }
+    html.mode-web .site-hero-sub {
+      margin: 0 0 32px;
+      font-size: 18px;
+      line-height: 1.55;
+      max-width: 460px;
+      color: #a3a3a3;
+    }
+    html.mode-web .site-hero-actions {
+      justify-content: flex-start;
+      gap: 14px;
+    }
+    html.mode-web .site-hero-actions .btn {
+      width: auto;
+      min-width: 160px;
+      padding: 14px 28px;
+      border-radius: 999px;
+      text-decoration: none;
+    }
+    html.mode-web .site-section {
+      padding: 72px 48px;
+      max-width: 1200px;
+      margin: 0 auto;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    html.mode-web .site-section h2 {
+      font-size: 36px;
+      margin-bottom: 12px;
+    }
+    html.mode-web .site-lead {
+      font-size: 17px;
+      margin-bottom: 36px;
+      max-width: 560px;
+    }
+    html.mode-web .site-grid {
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+    }
+    html.mode-web .site-card {
+      border-radius: 20px;
+      overflow: hidden;
+      transition: transform 0.2s, border-color 0.2s;
+    }
+    html.mode-web .site-card:hover {
+      transform: translateY(-4px);
+      border-color: #ff3b2f44;
+    }
+    html.mode-web .site-card-visual { height: 200px; }
+    html.mode-web .site-steps {
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+    }
+    html.mode-web .site-cta-block {
+      text-align: center;
+      padding-bottom: 96px;
+    }
+    html.mode-web .site-cta-block .site-lead {
+      margin-left: auto;
+      margin-right: auto;
+    }
+    html.mode-web .site-footer {
+      width: 100%;
+      padding: 48px 48px 40px;
+      border-top: 1px solid #1a1a1a;
+      box-sizing: border-box;
+    }
+    @media (max-width: 900px) {
+      html.mode-web .site-nav,
+      html.mode-web .site-hero,
+      html.mode-web .site-section {
+        padding-left: 24px;
+        padding-right: 24px;
+      }
+      html.mode-web .site-hero {
+        grid-template-columns: 1fr;
+        gap: 40px;
+        text-align: center;
+        padding-top: 48px;
+        padding-bottom: 56px;
+      }
+      html.mode-web .site-hero-logo {
+        margin: 0 auto;
+        max-width: 360px;
+        order: 0;
+      }
+      html.mode-web .site-hero-copy { order: 1; }
+      html.mode-web .site-hero-sub { margin-left: auto; margin-right: auto; }
+      html.mode-web .site-hero-actions { justify-content: center; }
+      html.mode-web .site-grid,
+      html.mode-web .site-steps { grid-template-columns: 1fr; }
+    }
+
     html.mode-web body { background: #0a0a0a; }
     html.mode-app .tabbar { max-width: 480px; }
     .screen { padding: 20px 20px 100px; min-height: 100dvh; }

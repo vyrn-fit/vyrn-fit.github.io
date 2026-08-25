@@ -19,27 +19,31 @@
     if (!root) return;
     root.innerHTML = `
     <div class="site">
-      <header class="site-nav">
-        <img src="/assets/logo.png" alt="Vyrn" class="site-nav-logo" />
-        <div class="site-nav-links">
-          <a href="#workouts">Workouts</a>
-          <a href="#how">How it works</a>
-          <a class="site-cta" href="/?app=1">Open app</a>
-        </div>
-      </header>
-
-      <section class="site-hero">
-        <div class="site-hero-copy">
-          <p class="site-eyebrow">Equipment-free fitness</p>
-          <h1 class="site-title">Show up.<br/>Put in the work.</h1>
-          <p class="site-hero-sub">Training for home, office, and the playground. Timed sessions, history, and weekly challenges — no special gear.</p>
-          <div class="site-hero-actions">
-            <a class="btn primary" href="/?app=1">Start training</a>
-            <a class="btn secondary" href="#workouts">See workouts</a>
+      <div class="site-nav-wrap">
+        <header class="site-nav">
+          <img src="/assets/logo-mark.png" alt="Vyrn" class="site-nav-logo" />
+          <div class="site-nav-links">
+            <a href="#workouts">Workouts</a>
+            <a href="#how">How it works</a>
+            <a class="site-cta" href="/?app=1">Open app</a>
           </div>
-        </div>
-        <img src="/assets/logo.png" alt="Vyrn" class="site-hero-logo" />
-      </section>
+        </header>
+      </div>
+
+      <div class="site-hero-wrap">
+        <section class="site-hero">
+          <div class="site-hero-copy">
+            <p class="site-eyebrow">Equipment-free fitness</p>
+            <h1 class="site-title">Show up.<br/>Put in the work.</h1>
+            <p class="site-hero-sub">Training for home, office, and the playground. Timed sessions, history, and weekly challenges — no special gear.</p>
+            <div class="site-hero-actions">
+              <a class="btn primary" href="/?app=1">Start training</a>
+              <a class="btn secondary" href="#workouts">See workouts</a>
+            </div>
+          </div>
+          <img src="/assets/logo.png" alt="Vyrn" class="site-hero-logo" />
+        </section>
+      </div>
 
       <section class="site-section" id="workouts">
         <h2>Train anywhere</h2>
