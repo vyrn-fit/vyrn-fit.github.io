@@ -29,12 +29,16 @@
       </header>
 
       <section class="site-hero">
-        <img src="/assets/logo.png" alt="Vyrn" class="site-hero-logo" />
-        <p class="site-hero-sub">Equipment-free training for home, office, and the playground. Show up. Put in the work.</p>
-        <div class="site-hero-actions">
-          <a class="btn primary" href="/?app=1">Start training</a>
-          <a class="btn secondary" href="#workouts">See workouts</a>
+        <div class="site-hero-copy">
+          <p class="site-eyebrow">Equipment-free fitness</p>
+          <h1 class="site-title">Show up.<br/>Put in the work.</h1>
+          <p class="site-hero-sub">Training for home, office, and the playground. Timed sessions, history, and weekly challenges — no special gear.</p>
+          <div class="site-hero-actions">
+            <a class="btn primary" href="/?app=1">Start training</a>
+            <a class="btn secondary" href="#workouts">See workouts</a>
+          </div>
         </div>
+        <img src="/assets/logo.png" alt="Vyrn" class="site-hero-logo" />
       </section>
 
       <section class="site-section" id="workouts">
@@ -42,17 +46,17 @@
         <p class="site-lead">Bodyweight sessions designed for real life — no gym bag required.</p>
         <div class="site-grid">
           <article class="site-card">
-            <img src="/assets/exercises/office.jpg" alt="Office workout" />
+            <div class="site-card-visual v-office"></div>
             <h3>Office</h3>
             <p>Quiet resets between meetings. No jumping, no sweat panic.</p>
           </article>
           <article class="site-card">
-            <img src="/assets/exercises/home.jpg" alt="Home workout" />
+            <div class="site-card-visual v-home"></div>
             <h3>Home</h3>
             <p>Full body, core, mobility — living-room friendly circuits.</p>
           </article>
           <article class="site-card">
-            <img src="/assets/exercises/park.jpg" alt="Playground workout" />
+            <div class="site-card-visual v-park"></div>
             <h3>Playground</h3>
             <p>Benches, bars, open space. Take the work outside.</p>
           </article>

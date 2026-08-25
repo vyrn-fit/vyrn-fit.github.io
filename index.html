@@ -34,7 +34,11 @@
       -webkit-font-smoothing: antialiased;
       overscroll-behavior: none;
     }
-    #app { min-height: 100dvh; max-width: 480px; margin: 0 auto; position: relative; }
+    #app { min-height: 100dvh; margin: 0 auto; position: relative; width: 100%; }
+    html.mode-app #app { max-width: 480px; }
+    html.mode-web #app { max-width: none; }
+    html.mode-web body { background: #0a0a0a; }
+    html.mode-app .tabbar { max-width: 480px; }
     .screen { padding: 20px 20px 100px; min-height: 100dvh; }
     .screen.center { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding-bottom: 40px; }
     .fade-in { animation: fadeIn 0.35s ease; }
@@ -311,6 +315,57 @@
       border: 2px solid #ff3b2f44;
     }
 
+
+    /* Desktop website layout */
+    html.mode-web .site { max-width: 1120px; margin: 0 auto; padding: 0 40px 80px; }
+    html.mode-web .site-nav { padding: 20px 0; }
+    html.mode-web .site-nav-logo { height: 48px; }
+    html.mode-web .site-hero {
+      display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 48px; align-items: center;
+      text-align: left; padding: 72px 0 80px;
+      background: radial-gradient(ellipse at 20% 40%, #4a1510 0%, transparent 55%);
+    }
+    html.mode-web .site-hero-logo {
+      width: 100%; max-width: 520px; margin: 0;
+      order: 2;
+    }
+    html.mode-web .site-hero-copy { order: 1; }
+    html.mode-web .site-hero-sub { margin: 0 0 28px; font-size: 20px; max-width: 440px; }
+    html.mode-web .site-hero-actions { justify-content: flex-start; }
+    html.mode-web .site-grid { grid-template-columns: repeat(3, 1fr); gap: 24px; }
+    html.mode-web .site-card img { height: 200px; }
+    html.mode-web .site-section h2 { font-size: 36px; }
+    html.mode-web .site-steps { grid-template-columns: repeat(3, 1fr); gap: 20px; }
+    @media (max-width: 800px) {
+      html.mode-web .site { padding: 0 20px 60px; }
+      html.mode-web .site-hero {
+        grid-template-columns: 1fr; text-align: center;
+        background: radial-gradient(ellipse at center, #3d1210 0%, transparent 65%);
+      }
+      html.mode-web .site-hero-logo { order: 0; margin: 0 auto 24px; }
+      html.mode-web .site-hero-copy { order: 1; }
+      html.mode-web .site-hero-sub { margin-left: auto; margin-right: auto; }
+      html.mode-web .site-hero-actions { justify-content: center; }
+      html.mode-web .site-grid { grid-template-columns: 1fr; }
+    }
+
+
+    .site-eyebrow {
+      color: #ff6b35; font-size: 13px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 1.5px; margin-bottom: 12px;
+    }
+    .site-title {
+      font-size: clamp(36px, 5vw, 56px); font-weight: 900; line-height: 1.05;
+      margin-bottom: 16px; letter-spacing: -1px;
+    }
+    .site-card-visual {
+      height: 180px; background-size: cover; background-position: center;
+      border-bottom: 1px solid var(--border);
+    }
+    .v-office { background-image: url('/assets/exercises/office.jpg'); }
+    .v-home { background-image: url('/assets/exercises/home.jpg'); }
+    .v-park { background-image: url('/assets/exercises/park.jpg'); }
+
     .workout-focus {
       background: radial-gradient(ellipse at top, #1a0a08 0%, #0a0a0a 55%) !important;
     }
@@ -392,6 +447,57 @@
       width: 160px; height: 160px; border-radius: 24px; object-fit: cover;
       border: 2px solid #ff3b2f44;
     }
+
+
+    /* Desktop website layout */
+    html.mode-web .site { max-width: 1120px; margin: 0 auto; padding: 0 40px 80px; }
+    html.mode-web .site-nav { padding: 20px 0; }
+    html.mode-web .site-nav-logo { height: 48px; }
+    html.mode-web .site-hero {
+      display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 48px; align-items: center;
+      text-align: left; padding: 72px 0 80px;
+      background: radial-gradient(ellipse at 20% 40%, #4a1510 0%, transparent 55%);
+    }
+    html.mode-web .site-hero-logo {
+      width: 100%; max-width: 520px; margin: 0;
+      order: 2;
+    }
+    html.mode-web .site-hero-copy { order: 1; }
+    html.mode-web .site-hero-sub { margin: 0 0 28px; font-size: 20px; max-width: 440px; }
+    html.mode-web .site-hero-actions { justify-content: flex-start; }
+    html.mode-web .site-grid { grid-template-columns: repeat(3, 1fr); gap: 24px; }
+    html.mode-web .site-card img { height: 200px; }
+    html.mode-web .site-section h2 { font-size: 36px; }
+    html.mode-web .site-steps { grid-template-columns: repeat(3, 1fr); gap: 20px; }
+    @media (max-width: 800px) {
+      html.mode-web .site { padding: 0 20px 60px; }
+      html.mode-web .site-hero {
+        grid-template-columns: 1fr; text-align: center;
+        background: radial-gradient(ellipse at center, #3d1210 0%, transparent 65%);
+      }
+      html.mode-web .site-hero-logo { order: 0; margin: 0 auto 24px; }
+      html.mode-web .site-hero-copy { order: 1; }
+      html.mode-web .site-hero-sub { margin-left: auto; margin-right: auto; }
+      html.mode-web .site-hero-actions { justify-content: center; }
+      html.mode-web .site-grid { grid-template-columns: 1fr; }
+    }
+
+
+    .site-eyebrow {
+      color: #ff6b35; font-size: 13px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 1.5px; margin-bottom: 12px;
+    }
+    .site-title {
+      font-size: clamp(36px, 5vw, 56px); font-weight: 900; line-height: 1.05;
+      margin-bottom: 16px; letter-spacing: -1px;
+    }
+    .site-card-visual {
+      height: 180px; background-size: cover; background-position: center;
+      border-bottom: 1px solid var(--border);
+    }
+    .v-office { background-image: url('/assets/exercises/office.jpg'); }
+    .v-home { background-image: url('/assets/exercises/home.jpg'); }
+    .v-park { background-image: url('/assets/exercises/park.jpg'); }
 
     .workout-focus { background: radial-gradient(ellipse at top, #1a0a08 0%, #0a0a0a 55%); }
   </style>
