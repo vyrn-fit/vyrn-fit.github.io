@@ -58,6 +58,33 @@ const WORKOUTS = {
       { name: 'Neck & shoulder rolls', duration: 40, rest: 0 }
     ]
   },
+  office_posture: {
+    id: 'office_posture', title: 'Desk Posture Fix', durationLabel: '7 min', place: 'Office', free: true,
+    description: 'Undo hunching. Quiet, chair-friendly.',
+    exercises: [
+      { name: 'Seated cat-cow', duration: 40, rest: 10 },
+      { name: 'Chin tucks', duration: 30, rest: 10 },
+      { name: 'Seated thoracic openers', duration: 40, rest: 10 },
+      { name: 'Standing chest opener', duration: 30, rest: 10 },
+      { name: 'Hip flexor stretch L', duration: 30, rest: 5 },
+      { name: 'Hip flexor stretch R', duration: 30, rest: 10 },
+      { name: 'Shoulder blade squeezes', duration: 40, rest: 10 },
+      { name: 'Slow neck rolls', duration: 40, rest: 0 }
+    ]
+  },
+  office_energy: {
+    id: 'office_energy', title: 'Afternoon Energy', durationLabel: '8 min', place: 'Office', free: false,
+    description: 'Wake up without sweating through your shirt.',
+    exercises: [
+      { name: 'Standing marches', duration: 40, rest: 15 },
+      { name: 'Bodyweight squats', duration: 40, rest: 15 },
+      { name: 'Wall push-ups', duration: 40, rest: 15 },
+      { name: 'Calf raises', duration: 40, rest: 15 },
+      { name: 'Standing side bends', duration: 40, rest: 15 },
+      { name: 'Arm circles', duration: 30, rest: 10 },
+      { name: 'Wall sit', duration: 40, rest: 0 }
+    ]
+  },
   home_12: {
     id: 'home_12', title: 'Home Full Body', durationLabel: '12 min', place: 'Home', free: true,
     description: 'Classic bodyweight circuit. Living room friendly.',
@@ -72,6 +99,91 @@ const WORKOUTS = {
       { name: 'Superman holds', duration: 40, rest: 20 },
       { name: 'High knees (or marches)', duration: 40, rest: 20 },
       { name: 'Cool-down stretch', duration: 40, rest: 0 }
+    ]
+  },
+  home_core: {
+    id: 'home_core', title: 'Core Focus', durationLabel: '8 min', place: 'Home', free: true,
+    description: 'Short core session. Mat optional.',
+    exercises: [
+      { name: 'Dead bugs', duration: 40, rest: 15 },
+      { name: 'Glute bridge march', duration: 40, rest: 15 },
+      { name: 'Side plank (left)', duration: 30, rest: 10 },
+      { name: 'Side plank (right)', duration: 30, rest: 15 },
+      { name: 'Bird dog', duration: 40, rest: 15 },
+      { name: 'Hollow hold (or tuck)', duration: 30, rest: 15 },
+      { name: 'Slow mountain climbers', duration: 40, rest: 0 }
+    ]
+  },
+  home_am: {
+    id: 'home_am', title: 'Morning Wake-Up', durationLabel: '9 min', place: 'Home', free: true,
+    description: 'Gentle-to-strong start. No equipment.',
+    exercises: [
+      { name: 'March in place', duration: 40, rest: 15 },
+      { name: 'Arm circles', duration: 30, rest: 10 },
+      { name: 'Bodyweight squats', duration: 40, rest: 15 },
+      { name: 'Incline or knee push-ups', duration: 40, rest: 15 },
+      { name: 'Glute bridges', duration: 40, rest: 15 },
+      { name: 'Standing toe reaches', duration: 30, rest: 10 },
+      { name: 'Plank', duration: 30, rest: 15 },
+      { name: 'Easy stretch flow', duration: 45, rest: 0 }
+    ]
+  },
+  home_hiit: {
+    id: 'home_hiit', title: 'Home HIIT Blast', durationLabel: '14 min', place: 'Home', free: false,
+    description: 'Higher intensity. Scale jumps to steps anytime.',
+    exercises: [
+      { name: 'Jumping jacks', duration: 40, rest: 20 },
+      { name: 'Squat pulses', duration: 40, rest: 20 },
+      { name: 'Push-ups', duration: 40, rest: 20 },
+      { name: 'High knees', duration: 40, rest: 20 },
+      { name: 'Reverse lunges', duration: 40, rest: 20 },
+      { name: 'Mountain climbers', duration: 40, rest: 20 },
+      { name: 'Burpees', duration: 35, rest: 25 },
+      { name: 'Plank shoulder taps', duration: 40, rest: 20 },
+      { name: 'Jump squats (or squats)', duration: 40, rest: 20 },
+      { name: 'Cool-down walk in place', duration: 45, rest: 0 }
+    ]
+  },
+  home_legs: {
+    id: 'home_legs', title: 'Legs & Glutes', durationLabel: '10 min', place: 'Home', free: false,
+    description: 'Lower body strength without weights.',
+    exercises: [
+      { name: 'Bodyweight squats', duration: 45, rest: 20 },
+      { name: 'Reverse lunges', duration: 45, rest: 20 },
+      { name: 'Glute bridges', duration: 45, rest: 20 },
+      { name: 'Wall sit', duration: 45, rest: 20 },
+      { name: 'Single-leg glute bridge L', duration: 30, rest: 10 },
+      { name: 'Single-leg glute bridge R', duration: 30, rest: 20 },
+      { name: 'Sumo squats', duration: 45, rest: 20 },
+      { name: 'Calf raises', duration: 40, rest: 0 }
+    ]
+  },
+  home_upper: {
+    id: 'home_upper', title: 'Upper Body Pump', durationLabel: '11 min', place: 'Home', free: false,
+    description: 'Push, pull, and hold — floor and wall only.',
+    exercises: [
+      { name: 'Push-ups', duration: 40, rest: 20 },
+      { name: 'Pike push-ups (or wall)', duration: 35, rest: 20 },
+      { name: 'Superman holds', duration: 40, rest: 15 },
+      { name: 'Diamond or narrow push-ups', duration: 35, rest: 20 },
+      { name: 'Plank', duration: 40, rest: 15 },
+      { name: 'Reverse tabletop holds', duration: 30, rest: 15 },
+      { name: 'Shoulder taps in plank', duration: 40, rest: 20 },
+      { name: 'Wall push-ups finisher', duration: 40, rest: 0 }
+    ]
+  },
+  home_mobility: {
+    id: 'home_mobility', title: 'Mobility Flow', durationLabel: '10 min', place: 'Home', free: true,
+    description: 'Move better. Great on rest days or after sitting.',
+    exercises: [
+      { name: 'World greatest stretch flow', duration: 45, rest: 15 },
+      { name: 'Hip circles', duration: 40, rest: 10 },
+      { name: 'Deep squat hold', duration: 40, rest: 15 },
+      { name: 'Thoracic rotations', duration: 40, rest: 10 },
+      { name: 'Hamstring fold', duration: 40, rest: 10 },
+      { name: 'Shoulder CARs slow', duration: 40, rest: 10 },
+      { name: 'Ankle rocks', duration: 30, rest: 10 },
+      { name: 'Easy breathing stretch', duration: 40, rest: 0 }
     ]
   },
   playground_15: {
@@ -89,31 +201,32 @@ const WORKOUTS = {
       { name: 'Easy jog / walk lap', duration: 60, rest: 0 }
     ]
   },
-  home_core: {
-    id: 'home_core', title: 'Core Focus', durationLabel: '8 min', place: 'Home', free: true,
-    description: 'Short core session. Mat optional.',
+  playground_sprint: {
+    id: 'playground_sprint', title: 'Park Power', durationLabel: '12 min', place: 'Playground', free: false,
+    description: 'Open space power. Scale intensity to how you feel.',
     exercises: [
-      { name: 'Dead bugs', duration: 40, rest: 15 },
-      { name: 'Glute bridge march', duration: 40, rest: 15 },
-      { name: 'Side plank (left)', duration: 30, rest: 10 },
-      { name: 'Side plank (right)', duration: 30, rest: 15 },
-      { name: 'Bird dog', duration: 40, rest: 15 },
-      { name: 'Hollow hold (or tuck)', duration: 30, rest: 15 },
-      { name: 'Slow mountain climbers', duration: 40, rest: 0 }
+      { name: 'Easy jog warm-up', duration: 60, rest: 20 },
+      { name: 'Walking lunges', duration: 45, rest: 20 },
+      { name: 'Bench step-ups', duration: 45, rest: 20 },
+      { name: 'Incline push-ups', duration: 40, rest: 20 },
+      { name: 'Broad jumps (or long steps)', duration: 30, rest: 25 },
+      { name: 'Bench dips', duration: 40, rest: 20 },
+      { name: 'Sprint or fast walk intervals', duration: 50, rest: 30 },
+      { name: 'Plank', duration: 40, rest: 15 },
+      { name: 'Cool-down walk', duration: 60, rest: 0 }
     ]
   },
-  home_legs: {
-    id: 'home_legs', title: 'Legs & Glutes', durationLabel: '10 min', place: 'Home', free: false,
-    description: 'Lower body strength without weights.',
+  playground_family: {
+    id: 'playground_family', title: 'Playground Easy', durationLabel: '10 min', place: 'Playground', free: true,
+    description: 'Light outdoor session. Good with kids nearby.',
     exercises: [
-      { name: 'Bodyweight squats', duration: 45, rest: 20 },
-      { name: 'Reverse lunges', duration: 45, rest: 20 },
-      { name: 'Glute bridges', duration: 45, rest: 20 },
-      { name: 'Wall sit', duration: 45, rest: 20 },
-      { name: 'Single-leg glute bridge L', duration: 30, rest: 10 },
-      { name: 'Single-leg glute bridge R', duration: 30, rest: 20 },
-      { name: 'Sumo squats', duration: 45, rest: 20 },
-      { name: 'Calf raises', duration: 40, rest: 0 }
+      { name: 'Walk the perimeter', duration: 60, rest: 15 },
+      { name: 'Bench sit-to-stand', duration: 40, rest: 15 },
+      { name: 'Incline push-ups', duration: 35, rest: 20 },
+      { name: 'Standing marches', duration: 40, rest: 15 },
+      { name: 'Calf raises on curb', duration: 40, rest: 15 },
+      { name: 'Gentle side lunges', duration: 40, rest: 15 },
+      { name: 'Easy stretch on grass', duration: 45, rest: 0 }
     ]
   },
   express_6: {
@@ -127,8 +240,33 @@ const WORKOUTS = {
       { name: 'Burpees', duration: 40, rest: 10 },
       { name: 'Mountain climbers', duration: 40, rest: 0 }
     ]
+  },
+  express_4: {
+    id: 'express_4', title: 'Micro 4', durationLabel: '4 min', place: 'Anywhere', free: true,
+    description: 'Tiny session beats no session.',
+    exercises: [
+      { name: 'Squats', duration: 40, rest: 15 },
+      { name: 'Push-ups or wall push-ups', duration: 40, rest: 15 },
+      { name: 'Plank', duration: 30, rest: 15 },
+      { name: 'March or jog in place', duration: 40, rest: 0 }
+    ]
+  },
+  hotel_10: {
+    id: 'hotel_10', title: 'Travel / Hotel', durationLabel: '10 min', place: 'Anywhere', free: true,
+    description: 'Small room friendly. Quiet enough for hotels.',
+    exercises: [
+      { name: 'Bodyweight squats', duration: 40, rest: 15 },
+      { name: 'Incline push-ups (desk/bed)', duration: 40, rest: 15 },
+      { name: 'Glute bridges', duration: 40, rest: 15 },
+      { name: 'Reverse lunges', duration: 40, rest: 15 },
+      { name: 'Plank', duration: 35, rest: 15 },
+      { name: 'Superman holds', duration: 35, rest: 15 },
+      { name: 'Calf raises', duration: 35, rest: 10 },
+      { name: 'Stretch & breathe', duration: 40, rest: 0 }
+    ]
   }
 };
+
 
 const DEFAULT_CHALLENGE = {
   id: 'local-1',

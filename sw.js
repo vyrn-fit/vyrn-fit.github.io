@@ -1,4 +1,4 @@
-const CACHE = 'vyrn-v2';
+const CACHE = 'vyrn-v3';
 const ASSETS = ['/', '/index.html', '/app.js', '/manifest.json'];
 
 self.addEventListener('install', (e) => {
