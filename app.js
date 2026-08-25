@@ -330,12 +330,44 @@ function sfxRest() { beep(440, 0.15, 'triangle', 0.06); }
 function sfxDone() { beep(523, 0.1); setTimeout(() => beep(659, 0.1), 100); setTimeout(() => beep(784, 0.2), 200); }
 function sfxTick() { beep(1200, 0.04, 'square', 0.04); }
 
+function speakForTts(text) {
+  // Normalize so Speech Synthesis does not spell acronyms/hyphens oddly
+  let s = String(text || '');
+  const replacements = [
+    [/push-?ups?/gi, 'push ups'],
+    [/sit-?ups?/gi, 'sit ups'],
+    [/pull-?ups?/gi, 'pull ups'],
+    [/chin-?ups?/gi, 'chin ups'],
+    [/jumping jacks?/gi, 'jumping jacks'],
+    [/high knees?/gi, 'high knees'],
+    [/mountain climbers?/gi, 'mountain climbers'],
+    [/glute bridges?/gi, 'glute bridges'],
+    [/dead bugs?/gi, 'dead bugs'],
+    [/bird dogs?/gi, 'bird dogs'],
+    [/wall sits?/gi, 'wall sits'],
+    [/calf raises?/gi, 'calf raises'],
+    [/hip circles?/gi, 'hip circles'],
+    [/step-?ups?/gi, 'step ups'],
+    [/cool-?down/gi, 'cool down'],
+    [/wake-?up/gi, 'wake up'],
+    [/HIIT/g, 'hit'],
+    [/\bL\b/g, 'left'],
+    [/\bR\b/g, 'right'],
+    [/\(knee OK\)/gi, 'knees okay'],
+    [/\(or [^)]+\)/gi, ''],  // drop parenthetical alternatives for cleaner speech
+    [/-/g, ' '],
+    [/\s+/g, ' ']
+  ];
+  for (const [re, rep] of replacements) s = s.replace(re, rep);
+  return s.trim();
+}
+
 function speak(text) {
   if (!voiceEnabled || !window.speechSynthesis) return;
   try {
     window.speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(text);
-    u.rate = 1.05;
+    const u = new SpeechSynthesisUtterance(speakForTts(text));
+    u.rate = 1.0;
     u.pitch = 1;
     u.volume = 0.9;
     window.speechSynthesis.speak(u);
