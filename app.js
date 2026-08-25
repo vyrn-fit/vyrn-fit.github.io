@@ -632,18 +632,18 @@ function renderLibrary() {
       const items = Object.values(WORKOUTS).filter(w => w.place === place);
       if (!items.length) return '';
       return `<h3 class="section">${place}</h3>
-        ${items.map(w => `
-          <div class="card tight-pad">
+        <div class="card">
+          ${items.map(w => `
             <button class="list-btn" data-workout="${w.id}">
               ${iconFor(w.title)}
               <span class="list-text">
                 <strong>${w.title}${!w.free && !isPro ? ' <span class="pro-tag">PRO</span>' : ''}</strong>
-                <span class="muted">${w.durationLabel} · ${w.place}</span>
+                <span class="muted">${w.durationLabel}</span>
               </span>
               <span class="chev">›</span>
             </button>
-          </div>
-        `).join('')}`;
+          `).join('')}
+        </div>`;
     }).join('')}
     ${renderLegalFooter()}
     ${renderTabBar('library')}
