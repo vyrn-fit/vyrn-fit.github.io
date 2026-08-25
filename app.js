@@ -1,4 +1,4 @@
-// Vyrn — Solo-first PWA (home / office / playground)
+// Vyrn — Solo-first PWA with auth, voice, SFX, motion
 const SUPABASE_URL = 'https://qgbpghtgcgzghpzoehrl.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_QkkE85SWWUNpSmvAK6R8kg_oB2bHJvQ';
 
@@ -7,11 +7,14 @@ let currentUser = null;
 let currentScreen = 'welcome';
 let activeWorkout = null;
 let exerciseIndex = 0;
-let phase = 'ready'; // ready | work | rest | done
+let phase = 'ready';
 let phaseSeconds = 0;
 let totalSeconds = 0;
 let tickTimer = null;
 let isPro = false;
+let voiceEnabled = true;
+let sfxEnabled = true;
+let audioCtx = null;
 
 const store = {
   get(key) {
@@ -22,15 +25,28 @@ const store = {
   }
 };
 
-// —— Workout library (all no/minimal equipment) ——
+// Exercise visual cues (original icon language — not licensed stock)
+const EX_ICON = {
+  default: '💪',
+  squat: '🦵', lunges: '🦵', 'wall sit': '🧱', 'calf': '🦶',
+  'push-up': '🫸', push: '🫸', dip: '🪑',
+  plank: '🧘', core: '🔥', 'dead bug': '🐛', 'bird dog': '🐦', hollow: '🌀',
+  'jumping': '⭐', mountain: '⛰️', burpee: '⚡', 'high knee': '🏃', march: '🚶',
+  bridge: '🌉', superman: '🦸', stretch: '🧘', hang: '🪝', step: '📶', jog: '🏃',
+  twist: '🔄', neck: '💆', hip: '⭕', chair: '🪑', desk: '💼'
+};
+function iconFor(name) {
+  const n = (name || '').toLowerCase();
+  for (const k of Object.keys(EX_ICON)) {
+    if (k !== 'default' && n.includes(k)) return EX_ICON[k];
+  }
+  return EX_ICON.default;
+}
+
 const WORKOUTS = {
   office_10: {
-    id: 'office_10',
-    title: 'Office Reset',
-    durationLabel: '10 min',
-    place: 'Office',
-    free: true,
-    description: 'Quiet moves you can do between meetings. No jumping.',
+    id: 'office_10', title: 'Office Reset', durationLabel: '10 min', place: 'Office', free: true,
+    description: 'Quiet moves between meetings. No jumping.',
     exercises: [
       { name: 'Desk chair sit-to-stand', duration: 40, rest: 15 },
       { name: 'Wall push-ups', duration: 40, rest: 15 },
@@ -43,11 +59,7 @@ const WORKOUTS = {
     ]
   },
   home_12: {
-    id: 'home_12',
-    title: 'Home Full Body',
-    durationLabel: '12 min',
-    place: 'Home',
-    free: true,
+    id: 'home_12', title: 'Home Full Body', durationLabel: '12 min', place: 'Home', free: true,
     description: 'Classic bodyweight circuit. Living room friendly.',
     exercises: [
       { name: 'Jumping jacks (or step-jacks)', duration: 40, rest: 20 },
@@ -63,11 +75,7 @@ const WORKOUTS = {
     ]
   },
   playground_15: {
-    id: 'playground_15',
-    title: 'Playground Circuit',
-    durationLabel: '15 min',
-    place: 'Playground',
-    free: true,
+    id: 'playground_15', title: 'Playground Circuit', durationLabel: '15 min', place: 'Playground', free: true,
     description: 'Bars, benches, open space. Optional pull-up bar.',
     exercises: [
       { name: 'Park-bench step-ups', duration: 45, rest: 20 },
@@ -82,11 +90,7 @@ const WORKOUTS = {
     ]
   },
   home_core: {
-    id: 'home_core',
-    title: 'Core Focus',
-    durationLabel: '8 min',
-    place: 'Home',
-    free: true,
+    id: 'home_core', title: 'Core Focus', durationLabel: '8 min', place: 'Home', free: true,
     description: 'Short core session. Mat optional.',
     exercises: [
       { name: 'Dead bugs', duration: 40, rest: 15 },
@@ -99,11 +103,7 @@ const WORKOUTS = {
     ]
   },
   home_legs: {
-    id: 'home_legs',
-    title: 'Legs & Glutes',
-    durationLabel: '10 min',
-    place: 'Home',
-    free: false, // Pro
+    id: 'home_legs', title: 'Legs & Glutes', durationLabel: '10 min', place: 'Home', free: false,
     description: 'Lower body strength without weights.',
     exercises: [
       { name: 'Bodyweight squats', duration: 45, rest: 20 },
@@ -117,12 +117,8 @@ const WORKOUTS = {
     ]
   },
   express_6: {
-    id: 'express_6',
-    title: 'Express 6',
-    durationLabel: '6 min',
-    place: 'Anywhere',
-    free: false, // Pro
-    description: 'Maximum density. When you only have a few minutes.',
+    id: 'express_6', title: 'Express 6', durationLabel: '6 min', place: 'Anywhere', free: false,
+    description: 'Maximum density when you only have minutes.',
     exercises: [
       { name: 'Squats', duration: 40, rest: 10 },
       { name: 'Push-ups', duration: 40, rest: 10 },
@@ -148,6 +144,46 @@ const DEFAULT_CHALLENGE = {
   ]
 };
 
+// —— Audio ——
+function ensureAudio() {
+  if (!audioCtx) {
+    try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch (_) {}
+  }
+  if (audioCtx?.state === 'suspended') audioCtx.resume();
+}
+
+function beep(freq = 880, dur = 0.08, type = 'sine', gain = 0.08) {
+  if (!sfxEnabled) return;
+  ensureAudio();
+  if (!audioCtx) return;
+  const t = audioCtx.currentTime;
+  const o = audioCtx.createOscillator();
+  const g = audioCtx.createGain();
+  o.type = type;
+  o.frequency.value = freq;
+  g.gain.setValueAtTime(gain, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+  o.connect(g); g.connect(audioCtx.destination);
+  o.start(t); o.stop(t + dur);
+}
+
+function sfxStart() { beep(660, 0.1); setTimeout(() => beep(880, 0.12), 90); }
+function sfxRest() { beep(440, 0.15, 'triangle', 0.06); }
+function sfxDone() { beep(523, 0.1); setTimeout(() => beep(659, 0.1), 100); setTimeout(() => beep(784, 0.2), 200); }
+function sfxTick() { beep(1200, 0.04, 'square', 0.04); }
+
+function speak(text) {
+  if (!voiceEnabled || !window.speechSynthesis) return;
+  try {
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.rate = 1.05;
+    u.pitch = 1;
+    u.volume = 0.9;
+    window.speechSynthesis.speak(u);
+  } catch (_) {}
+}
+
 // —— Helpers ——
 function $(sel) { return document.querySelector(sel); }
 function $all(sel) { return document.querySelectorAll(sel); }
@@ -156,22 +192,17 @@ function formatTime(s) {
   const sec = Math.floor(s % 60);
   return `${m}:${sec.toString().padStart(2, '0')}`;
 }
-function todayKey() {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function getHistory() {
-  return store.get('history') || [];
-}
-
+function todayKey() { return new Date().toISOString().slice(0, 10); }
+function getHistory() { return store.get('history') || []; }
 function getStats() {
   const history = getHistory();
   const today = todayKey();
-  const todayCount = history.filter(h => h.date === today).length;
-  const streak = store.get('streak') || 0;
-  return { total: history.length, today: todayCount, streak };
+  return {
+    total: history.length,
+    today: history.filter(h => h.date === today).length,
+    streak: store.get('streak') || 0
+  };
 }
-
 function lastSameWorkout(workoutId) {
   const history = getHistory().filter(h => h.workoutId === workoutId);
   return history.length ? history[history.length - 1] : null;
@@ -181,20 +212,13 @@ async function saveWorkoutSession(session) {
   const history = getHistory();
   history.push(session);
   store.set('history', history);
-
-  // Streak: if last workout was yesterday or today, increment-ish
   const dates = [...new Set(history.map(h => h.date))].sort();
   let streak = 1;
   for (let i = dates.length - 1; i > 0; i--) {
-    const d1 = new Date(dates[i]);
-    const d0 = new Date(dates[i - 1]);
-    const diff = (d1 - d0) / 86400000;
-    if (diff <= 1.5) streak++;
-    else break;
+    const diff = (new Date(dates[i]) - new Date(dates[i - 1])) / 86400000;
+    if (diff <= 1.5) streak++; else break;
   }
   store.set('streak', streak);
-
-  // Cloud when signed in (best-effort)
   if (supabaseClient && currentUser && !currentUser.isGuest) {
     try {
       await supabaseClient.from('workouts').insert({
@@ -205,35 +229,40 @@ async function saveWorkoutSession(session) {
         completed_at: new Date().toISOString()
       });
     } catch (e) {
-      console.warn('Cloud save skipped (table may not exist yet)', e.message);
+      console.warn('Cloud save skipped', e.message);
     }
   }
 }
 
-// —— Init ——
 async function init() {
   isPro = !!store.get('isPro');
+  voiceEnabled = store.get('voiceEnabled') !== false;
+  sfxEnabled = store.get('sfxEnabled') !== false;
+
   if (window.supabase) {
     supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     const { data: { session } } = await supabaseClient.auth.getSession();
-    if (session) {
+    if (session?.user) {
       currentUser = session.user;
-      if (currentUser?.email && currentUser.email.toLowerCase().includes('pro')) {
-        isPro = true;
-        store.set('isPro', true);
+      if (currentUser.email?.toLowerCase().includes('pro')) {
+        isPro = true; store.set('isPro', true);
       }
     }
     supabaseClient.auth.onAuthStateChange((_e, s) => {
       currentUser = s?.user || null;
-      if (currentUser?.email && currentUser.email.toLowerCase().includes('pro')) {
-        isPro = true;
-        store.set('isPro', true);
+      if (currentUser?.email?.toLowerCase().includes('pro')) {
+        isPro = true; store.set('isPro', true);
       }
       if (currentScreen !== 'workoutRun') render();
     });
   }
   if (!currentUser && store.get('guest')) {
-    currentUser = { id: 'guest', email: store.get('guest').email || 'guest@vyrn.app', isGuest: true };
+    const g = store.get('guest');
+    currentUser = { id: g.id || 'guest', email: g.email || 'guest@vyrn.app', isGuest: true };
+  }
+  // OAuth return hash
+  if (window.location.hash.includes('access_token') || window.location.search.includes('code=')) {
+    currentScreen = 'home';
   }
   render();
 }
@@ -251,19 +280,11 @@ function navigate(screen) {
 function render() {
   const app = $('#app');
   if (!app) return;
-  if (!currentUser && !['welcome', 'login'].includes(currentScreen)) {
-    currentScreen = 'welcome';
-  }
+  if (!currentUser && !['welcome', 'login'].includes(currentScreen)) currentScreen = 'welcome';
   const map = {
-    welcome: renderWelcome,
-    login: renderLogin,
-    home: renderHome,
-    library: renderLibrary,
-    workoutDetail: renderWorkoutDetail,
-    workoutRun: renderWorkoutRun,
-    history: renderHistory,
-    challenge: renderChallenge,
-    challengeRun: renderChallengeRun,
+    welcome: renderWelcome, login: renderLogin, home: renderHome,
+    library: renderLibrary, workoutDetail: renderWorkoutDetail, workoutRun: renderWorkoutRun,
+    history: renderHistory, challenge: renderChallenge, challengeRun: renderChallengeRun,
     profile: renderProfile
   };
   app.innerHTML = (map[currentScreen] || renderWelcome)();
@@ -290,36 +311,45 @@ function renderTabBar(active) {
   </nav>`;
 }
 
-// —— Screens ——
 function renderWelcome() {
-  return `<div class="screen center">
-    <div class="logo-big">VYRN</div>
+  return `<div class="screen center fade-in">
+    <div class="logo-big pulse-soft">VYRN</div>
     <p class="tagline">Show up. Put in the work.</p>
     <p class="muted">Home · Office · Playground — no special gear</p>
     <div class="btn-stack">
       <button class="btn primary" data-go="login">Sign in / Sign up</button>
       <button class="btn ghost" data-action="guest">Continue as Guest</button>
     </div>
-    <p class="muted" style="margin-top:20px;font-size:12px">Sign in to sync history across devices</p>
   </div>`;
 }
 
 function renderLogin() {
-  return `<div class="screen center">
+  return `<div class="screen center fade-in">
     <div class="logo-sm">VYRN</div>
-    <h2>Account</h2>
-    <p class="muted mb">Cloud history needs an account</p>
+    <h2>Welcome</h2>
+    <p class="muted mb">Sign in to sync history across devices</p>
+    <div class="btn-stack" style="max-width:340px">
+      <button class="btn oauth google" data-action="oauth-google">
+        <span class="oauth-ico">G</span> Continue with Google
+      </button>
+      <button class="btn oauth apple" data-action="oauth-apple">
+        <span class="oauth-ico"></span> Continue with Apple
+      </button>
+    </div>
+    <div class="divider"><span>or email</span></div>
     <div class="form">
       <input id="email" type="email" placeholder="Email" autocomplete="email" />
       <input id="password" type="password" placeholder="Password (min 6)" autocomplete="current-password" />
       <button class="btn primary" data-action="signin">Sign In</button>
       <button class="btn secondary" data-action="signup">Create Account</button>
-      <p class="muted" style="margin:12px 0 4px;font-size:12px">Quick test accounts</p>
+    </div>
+    <p id="auth-msg" class="msg"></p>
+    <div class="divider"><span>quick test</span></div>
+    <div class="btn-stack" style="max-width:340px;margin-top:0">
       <button class="btn secondary" data-action="demo-free">Demo Free user</button>
       <button class="btn secondary" data-action="demo-pro">Demo Pro user</button>
       <button class="btn ghost" data-go="welcome">← Back</button>
     </div>
-    <p id="auth-msg" class="msg"></p>
   </div>`;
 }
 
@@ -327,13 +357,13 @@ function renderHome() {
   const stats = getStats();
   const name = currentUser?.email?.split('@')[0] || 'Athlete';
   const freeList = Object.values(WORKOUTS).filter(w => w.free);
-  return `<div class="screen">
+  return `<div class="screen fade-in">
     <div class="topbar">
       <div>
         <p class="muted">Ready to Vyrn?</p>
         <h2>${name}</h2>
       </div>
-      ${currentUser?.isGuest ? '<span class="badge">Guest</span>' : ''}
+      ${currentUser?.isGuest ? '<span class="badge">Guest</span>' : (isPro ? '<span class="badge pro">Pro</span>' : '')}
     </div>
     <div class="stats mb">
       <div class="stat"><div class="num">${stats.today}</div><div class="lbl">Today</div></div>
@@ -345,7 +375,8 @@ function renderHome() {
       <p class="muted mb">Pick a free session for where you are</p>
       ${freeList.map(w => `
         <button class="list-btn" data-workout="${w.id}">
-          <span><strong>${w.title}</strong><br><span class="muted">${w.place} · ${w.durationLabel}</span></span>
+          <span class="ex-ico">${iconFor(w.title)}</span>
+          <span class="list-text"><strong>${w.title}</strong><br><span class="muted">${w.place} · ${w.durationLabel}</span></span>
           <span class="chev">→</span>
         </button>
       `).join('')}
@@ -358,7 +389,7 @@ function renderHome() {
 
 function renderLibrary() {
   const places = ['Office', 'Home', 'Playground', 'Anywhere'];
-  return `<div class="screen">
+  return `<div class="screen fade-in">
     <div class="topbar"><h2>Workouts</h2></div>
     <p class="muted mb">All sessions work with bodyweight only</p>
     ${places.map(place => {
@@ -368,7 +399,8 @@ function renderLibrary() {
         ${items.map(w => `
           <div class="card tight-pad">
             <button class="list-btn" data-workout="${w.id}">
-              <span>
+              <span class="ex-ico">${iconFor(w.title)}</span>
+              <span class="list-text">
                 <strong>${w.title}</strong>
                 ${!w.free && !isPro ? ' <span class="pro-tag">PRO</span>' : ''}
                 <br><span class="muted">${w.durationLabel} · ${w.description}</span>
@@ -388,21 +420,26 @@ function renderWorkoutDetail() {
   if (!w) return renderLibrary();
   const prev = lastSameWorkout(w.id);
   const locked = !w.free && !isPro;
-  return `<div class="screen">
+  return `<div class="screen fade-in">
     <div class="topbar">
       <button class="back" data-go="library">←</button>
       <h2>${w.title}</h2>
     </div>
-    <p class="muted">${w.place} · ${w.durationLabel}</p>
-    <p class="mb">${w.description}</p>
+    <div class="hero-icon">${iconFor(w.title)}</div>
+    <p class="muted center">${w.place} · ${w.durationLabel}</p>
+    <p class="mb center">${w.description}</p>
     ${prev ? `<div class="card highlight">
       <p class="muted">Last time</p>
       <p><strong>${formatTime(prev.duration)}</strong> · ${prev.date}</p>
       <p class="muted" style="font-size:12px">Finish faster to beat your best</p>
-    </div>` : '<p class="muted mb">First time on this session — set your baseline</p>'}
+    </div>` : '<p class="muted mb center">First time — set your baseline</p>'}
     <div class="exercise-list">
       ${w.exercises.map((e, i) => `
-        <div class="ex-item"><span>${i + 1}. ${e.name}</span><span class="muted">${e.duration}s</span></div>
+        <div class="ex-item">
+          <span class="ex-ico-sm">${iconFor(e.name)}</span>
+          <span>${i + 1}. ${e.name}</span>
+          <span class="muted">${e.duration}s</span>
+        </div>
       `).join('')}
     </div>
     ${locked
@@ -417,13 +454,18 @@ function renderWorkoutRun() {
   if (!w) return renderHome();
   const ex = w.exercises[exerciseIndex];
   const total = w.exercises.length;
-  const label = phase === 'work' ? ex?.name : phase === 'rest' ? 'Rest' : phase === 'done' ? 'Done' : 'Get ready';
-  return `<div class="screen center">
-    <p class="muted">${w.title} · ${exerciseIndex + 1}/${total}</p>
+  const label = phase === 'work' ? (ex?.name || '') : phase === 'rest' ? 'Rest' : phase === 'done' ? 'Session complete' : 'Get ready';
+  const ico = phase === 'rest' ? '😮‍💨' : phase === 'done' ? '✅' : iconFor(ex?.name);
+  const pct = ((exerciseIndex + (phase === 'rest' ? 0.5 : phase === 'done' ? 1 : 0)) / total) * 100;
+  return `<div class="screen center workout-focus fade-in">
+    <p class="muted">${w.title} · ${Math.min(exerciseIndex + 1, total)}/${total}</p>
+    <div class="ex-stage ${phase}">
+      <div class="ex-icon-lg ${phase === 'work' ? 'bounce' : ''}">${ico}</div>
+    </div>
     <div class="timer-display big" id="phase-timer">${formatTime(phaseSeconds)}</div>
-    <h2 id="phase-label">${label || ''}</h2>
-    <p class="muted" id="phase-hint">${phase === 'work' ? 'Keep moving' : phase === 'rest' ? 'Breathe' : ''}</p>
-    <div class="progress-bar"><div class="progress-fill" style="width:${((exerciseIndex + (phase==='rest'?1:0)) / total) * 100}%"></div></div>
+    <h2 id="phase-label">${label}</h2>
+    <p class="muted" id="phase-hint">${phase === 'work' ? 'Keep moving' : phase === 'rest' ? 'Breathe' : phase === 'done' ? 'Nice work' : 'Voice + sound on by default'}</p>
+    <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
     <div class="btn-stack">
       ${phase === 'ready' ? `<button class="btn primary" data-action="begin-timer">Begin</button>` : ''}
       ${phase === 'done' ? `<button class="btn primary" data-action="save-session">Save & finish</button>` : ''}
@@ -441,7 +483,7 @@ function renderHistory() {
     byDate[h.date].push(h);
   });
   const dates = Object.keys(byDate);
-  return `<div class="screen">
+  return `<div class="screen fade-in">
     <div class="topbar"><h2>History</h2></div>
     ${!currentUser || currentUser.isGuest
       ? `<p class="muted mb">Guest data stays on this device. <a href="#" data-go="login" style="color:#22c55e">Sign in</a> to sync.</p>`
@@ -461,6 +503,7 @@ function renderHistory() {
           }
           return `<div class="card tight-pad">
             <div class="lb-row" style="border:none;padding:4px 0">
+              <span class="ex-ico-sm">${iconFor(h.title)}</span>
               <span class="name"><strong>${h.title}</strong><br><span class="muted">${formatTime(h.duration)}</span></span>
               <span>${cmp}</span>
             </div>
@@ -475,7 +518,7 @@ function renderHistory() {
 function renderChallenge() {
   const entries = store.get('entries') || [];
   const sorted = [...entries].sort((a, b) => a.score_seconds - b.score_seconds).slice(0, 10);
-  return `<div class="screen">
+  return `<div class="screen fade-in">
     <div class="topbar">
       <button class="back" data-go="home">←</button>
       <h2>Weekly Challenge</h2>
@@ -485,7 +528,7 @@ function renderChallenge() {
       <p class="muted mb">${DEFAULT_CHALLENGE.description}</p>
       <div class="exercise-list">
         ${DEFAULT_CHALLENGE.exercises.map(e =>
-          `<div class="ex-item"><span>${e.name}</span><span class="muted">${e.reps ? e.reps + ' reps' : e.duration_seconds + 's'}</span></div>`
+          `<div class="ex-item"><span class="ex-ico-sm">${iconFor(e.name)}</span><span>${e.name}</span><span class="muted">${e.reps ? e.reps + ' reps' : e.duration_seconds + 's'}</span></div>`
         ).join('')}
       </div>
       <button class="btn primary mt" data-go="challengeRun">Start Challenge</button>
@@ -506,12 +549,12 @@ function renderChallenge() {
 }
 
 function renderChallengeRun() {
-  return `<div class="screen center">
+  return `<div class="screen center fade-in">
     <p class="muted">Challenge timer</p>
     <div class="timer-display big" id="c-timer">0:00</div>
     <div class="exercise-list left">
       ${DEFAULT_CHALLENGE.exercises.map(e =>
-        `<div class="ex-item"><span>${e.name}</span><span class="muted">${e.reps ? e.reps + ' reps' : e.duration_seconds + 's'}</span></div>`
+        `<div class="ex-item"><span class="ex-ico-sm">${iconFor(e.name)}</span><span>${e.name}</span><span class="muted">${e.reps ? e.reps + ' reps' : e.duration_seconds + 's'}</span></div>`
       ).join('')}
     </div>
     <div class="btn-stack">
@@ -524,7 +567,7 @@ function renderChallengeRun() {
 
 function renderProfile() {
   const stats = getStats();
-  return `<div class="screen">
+  return `<div class="screen fade-in">
     <div class="center mb">
       <div class="avatar">${(currentUser?.email?.[0] || 'V').toUpperCase()}</div>
       <p class="muted">${currentUser?.email || 'Guest'}</p>
@@ -534,10 +577,21 @@ function renderProfile() {
       <h3>${isPro ? 'Pro' : 'Free'} plan</h3>
       <p class="muted mb">${isPro
         ? 'Full library, unlimited history, comparisons.'
-        : 'Free: 4 core workouts, history on this device. Pro ($7/mo): full library, longer history, priority features.'}</p>
+        : 'Free: 4 core workouts, history on this device. Pro ($7/mo): full library + more.'}</p>
       ${!isPro
         ? `<button class="btn primary" data-action="upgrade">Upgrade to Pro — $7/mo</button>`
         : `<button class="btn ghost" data-action="downgrade">Manage (demo: switch to Free)</button>`}
+    </div>
+    <div class="card">
+      <h3>Audio</h3>
+      <div class="toggle-row">
+        <span>Voice coaching</span>
+        <button class="toggle ${voiceEnabled?'on':''}" data-action="toggle-voice">${voiceEnabled?'On':'Off'}</button>
+      </div>
+      <div class="toggle-row">
+        <span>Sound effects</span>
+        <button class="toggle ${sfxEnabled?'on':''}" data-action="toggle-sfx">${sfxEnabled?'On':'Off'}</button>
+      </div>
     </div>
     <div class="stats mt">
       <div class="stat"><div class="num">${stats.total}</div><div class="lbl">Sessions</div></div>
@@ -550,7 +604,6 @@ function renderProfile() {
   </div>`;
 }
 
-// —— Events & workout engine ——
 function bindEvents() {
   $all('[data-go]').forEach(el => el.onclick = (e) => { e.preventDefault(); navigate(el.dataset.go); });
   $all('[data-action]').forEach(el => el.onclick = () => handleAction(el.dataset.action));
@@ -567,6 +620,7 @@ function startPhaseTimer() {
     totalSeconds++;
     const el = $('#phase-timer');
     if (el) el.textContent = formatTime(Math.max(0, phaseSeconds));
+    if (phaseSeconds === 3 || phaseSeconds === 2 || phaseSeconds === 1) sfxTick();
     if (phaseSeconds <= 0) advancePhase();
   }, 1000);
 }
@@ -581,22 +635,27 @@ function advancePhase() {
     if (rest > 0) {
       phase = 'rest';
       phaseSeconds = rest;
+      sfxRest();
+      speak('Rest');
       render();
       startPhaseTimer();
       return;
     }
   }
 
-  // next exercise
   if (phase === 'work' || phase === 'rest') {
     exerciseIndex++;
     if (exerciseIndex >= w.exercises.length) {
       phase = 'done';
+      sfxDone();
+      speak('Session complete. Great work.');
       render();
       return;
     }
     phase = 'work';
     phaseSeconds = w.exercises[exerciseIndex].duration;
+    sfxStart();
+    speak(w.exercises[exerciseIndex].name);
     render();
     startPhaseTimer();
   }
@@ -606,29 +665,43 @@ async function handleAction(action) {
   const msg = $('#auth-msg');
 
   if (action === 'guest') {
-    store.set('guest', { email: 'guest@vyrn.app' });
+    store.set('guest', { email: 'guest@vyrn.app', id: 'guest' });
     currentUser = { id: 'guest', email: 'guest@vyrn.app', isGuest: true };
-    isPro = false;
-    store.set('isPro', false);
+    isPro = false; store.set('isPro', false);
     navigate('home');
     return;
   }
-
   if (action === 'demo-free') {
-    store.set('guest', { email: 'free@vyrn.demo' });
+    store.set('guest', { email: 'free@vyrn.demo', id: 'demo-free' });
     currentUser = { id: 'demo-free', email: 'free@vyrn.demo', isGuest: true };
-    isPro = false;
-    store.set('isPro', false);
+    isPro = false; store.set('isPro', false);
+    navigate('home');
+    return;
+  }
+  if (action === 'demo-pro') {
+    store.set('guest', { email: 'pro@vyrn.demo', id: 'demo-pro' });
+    currentUser = { id: 'demo-pro', email: 'pro@vyrn.demo', isGuest: true };
+    isPro = true; store.set('isPro', true);
     navigate('home');
     return;
   }
 
-  if (action === 'demo-pro') {
-    store.set('guest', { email: 'pro@vyrn.demo' });
-    currentUser = { id: 'demo-pro', email: 'pro@vyrn.demo', isGuest: true };
-    isPro = true;
-    store.set('isPro', true);
-    navigate('home');
+  if (action === 'oauth-google' || action === 'oauth-apple') {
+    const provider = action === 'oauth-google' ? 'google' : 'apple';
+    if (!supabaseClient) {
+      if (msg) msg.textContent = 'Auth unavailable offline. Use Demo or Email.';
+      return;
+    }
+    try {
+      const { error } = await supabaseClient.auth.signInWithOAuth({
+        provider,
+        options: { redirectTo: window.location.origin + '/' }
+      });
+      if (error) throw error;
+    } catch (e) {
+      if (msg) msg.textContent = (e.message || 'Provider not configured') +
+        ' — enable Google/Apple in Supabase Auth, or use Email / Demo.';
+    }
     return;
   }
 
@@ -668,17 +741,27 @@ async function handleAction(action) {
   }
 
   if (action === 'upgrade') {
-    // Demo unlock — real payments later
-    isPro = true;
-    store.set('isPro', true);
+    isPro = true; store.set('isPro', true);
     alert('Pro unlocked (demo). Full library available.');
     render();
     return;
   }
-
   if (action === 'downgrade') {
-    isPro = false;
-    store.set('isPro', false);
+    isPro = false; store.set('isPro', false);
+    render();
+    return;
+  }
+  if (action === 'toggle-voice') {
+    voiceEnabled = !voiceEnabled;
+    store.set('voiceEnabled', voiceEnabled);
+    if (voiceEnabled) speak('Voice on');
+    render();
+    return;
+  }
+  if (action === 'toggle-sfx') {
+    sfxEnabled = !sfxEnabled;
+    store.set('sfxEnabled', sfxEnabled);
+    if (sfxEnabled) sfxStart();
     render();
     return;
   }
@@ -698,9 +781,12 @@ async function handleAction(action) {
   }
 
   if (action === 'begin-timer') {
+    ensureAudio();
     phase = 'work';
     phaseSeconds = activeWorkout.exercises[0].duration;
     totalSeconds = 0;
+    sfxStart();
+    speak(activeWorkout.exercises[0].name);
     render();
     startPhaseTimer();
     return;
@@ -714,6 +800,7 @@ async function handleAction(action) {
 
   if (action === 'abort-session') {
     clearInterval(tickTimer);
+    window.speechSynthesis?.cancel();
     activeWorkout = null;
     navigate('home');
     return;
@@ -745,11 +832,13 @@ async function handleAction(action) {
     return;
   }
 
-  // Challenge timers (unchanged logic)
   if (action === 'toggle-challenge') {
     if (!window._cRunning) {
       window._cRunning = true;
       window._cSec = 0;
+      ensureAudio();
+      sfxStart();
+      speak('Challenge started');
       $('#c-toggle').textContent = 'Pause';
       $('#c-finish').classList.remove('hidden');
       window._cTimer = setInterval(() => {
@@ -767,6 +856,8 @@ async function handleAction(action) {
   if (action === 'finish-challenge') {
     clearInterval(window._cTimer);
     window._cRunning = false;
+    sfxDone();
+    speak('Time submitted');
     const entries = store.get('entries') || [];
     const name = currentUser?.email?.split('@')[0] || 'Athlete';
     const filtered = entries.filter(e => e.user_id !== (currentUser?.id || 'guest'));
