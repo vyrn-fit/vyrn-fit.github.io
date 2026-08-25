@@ -53,7 +53,7 @@ function photoUrl(name) {
   return '/assets/exercises/' + photoKey(name) + '.jpg?v=17';
 }
 function videoUrl(name) {
-  return '/assets/videos/' + photoKey(name) + '.mp4?v=2';
+  return '/assets/videos/' + photoKey(name) + '.mp4?v=3';
 }
 function iconFor(name) {
   return `<img class="photo-thumb" src="${photoUrl(name)}" alt="" loading="lazy" />`;
@@ -519,7 +519,12 @@ function render() {
   bindEvents();
   // Autoplay exercise loops (muted required by browsers)
   document.querySelectorAll('video.ex-video').forEach(v => {
-    v.play().catch(() => {});
+    v.muted = true;
+    v.setAttribute('muted', '');
+    v.playsInline = true;
+    const tryPlay = () => v.play().catch(() => {});
+    v.addEventListener('loadeddata', tryPlay, { once: true });
+    tryPlay();
   });
 }
 
@@ -692,7 +697,7 @@ function renderWorkoutRun() {
   if (phase === 'done') {
     stageMedia = '<div class="ex-done-mark">✓</div>';
   } else if (phase === 'work' || phase === 'ready') {
-    stageMedia = `<video class="ex-video" src="${videoUrl(mediaName)}" poster="${photoUrl(mediaName)}" autoplay muted loop playsinline webkit-playsinline></video>`;
+    stageMedia = `<video class="ex-video" src="${videoUrl(mediaName)}" poster="${photoUrl(mediaName)}" autoplay muted loop playsinline webkit-playsinline preload="auto"></video>`;
   } else {
     stageMedia = `<img class="photo-stage" src="${photoUrl(mediaName)}" alt="" />`;
   }
