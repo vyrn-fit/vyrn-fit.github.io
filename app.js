@@ -25,29 +25,35 @@ const store = {
   }
 };
 
-// Exercise visual cues — SVG icons (original line style)
-function iconKey(name) {
+// Exercise photos (free stock — Unsplash / Pexels)
+function photoKey(name) {
   const n = (name || '').toLowerCase();
-  if (/squat|wall sit|sumo|pulse/.test(n)) return 'squat';
-  if (/push|dip|pike|diamond|shoulder tap/.test(n)) return 'pushup';
-  if (/plank|hollow|dead bug|bird|core/.test(n)) return 'plank';
+  if (/office|desk|chair|posture|seated|wall sit|neck|chin|thoracic|shoulder blade/.test(n)) return 'office';
+  if (/squat|sumo|pulse|wall sit/.test(n)) return 'squat';
+  if (/push|dip|pike|diamond|incline/.test(n)) return 'pushup';
+  if (/plank|hollow|dead bug|bird|shoulder tap/.test(n)) return 'plank';
   if (/lunge|step-up|step up/.test(n)) return 'lunge';
-  if (/jog|run|march|high knee|walk|sprint/.test(n)) return 'run';
-  if (/stretch|mobility|open|roll|fold|circle|breath|cat-cow|chin|thoracic|hamstring|ankle|hip flexor|neck|shoulder blade|chest opener|side bend|arm circle|toe reach/.test(n)) return 'stretch';
-  if (/bridge|superman|tabletop/.test(n)) return 'core';
-  if (/jump|burpee|jack|climber|broad/.test(n)) return 'jump';
+  if (/jog|run|march|high knee|walk|sprint|park|perimeter/.test(n)) return 'run';
+  if (/stretch|mobility|open|roll|fold|circle|breath|yoga|hamstring|ankle|hip|cool|toe reach|arm circle|side bend/.test(n)) return 'stretch';
+  if (/bridge|superman|tabletop|core|glute/.test(n)) return 'core';
+  if (/jump|burpee|jack|climber|broad|hiit/.test(n)) return 'jump';
+  if (/playground|bench|hang|bar/.test(n)) return 'park';
+  if (/home|full body|morning|hotel|travel/.test(n)) return 'home';
+  if (/strength|upper|legs/.test(n)) return 'strength';
   return 'default';
 }
-function iconSvg(name, sizeClass) {
-  const key = iconKey(name);
-  const icons = window.VYRN_ICONS || {};
-  const svg = icons[key] || icons.default || '';
-  const cls = sizeClass || 'icon-svg';
-  return `<span class="${cls}" aria-hidden="true">${svg}</span>`;
+function photoUrl(name) {
+  return '/assets/exercises/' + photoKey(name) + '.jpg';
 }
 function iconFor(name) {
-  // legacy string for places that still expect emoji-like content — return SVG wrapper
-  return iconSvg(name, 'icon-svg-sm');
+  return `<img class="photo-thumb" src="${photoUrl(name)}" alt="" loading="lazy" />`;
+}
+function iconSvg(name, sizeClass) {
+  // compatibility: large photo for stage
+  if (sizeClass && sizeClass.includes('lg')) {
+    return `<img class="photo-stage" src="${photoUrl(name)}" alt="" />`;
+  }
+  return iconFor(name);
 }
 
 const WORKOUTS = {
@@ -379,7 +385,18 @@ async function saveWorkoutSession(session) {
   }
 }
 
+function isAppMode() {
+  return (
+    window.matchMedia('(display-mode: standalone)').matches ||
+    window.navigator.standalone === true ||
+    new URLSearchParams(location.search).get('app') === '1'
+  );
+}
+
 async function init() {
+  // Browser without ?app=1 → marketing site (site.js). App / PWA → this shell.
+  if (!isAppMode()) return;
+
   isPro = !!store.get('isPro');
   voiceEnabled = store.get('voiceEnabled') !== false;
   sfxEnabled = store.get('sfxEnabled') !== false;
@@ -569,7 +586,7 @@ function renderWorkoutDetail() {
       <button class="back" data-go="library">←</button>
       <h2>${w.title}</h2>
     </div>
-    <div class="hero-icon">${iconSvg(w.title, "icon-svg-lg")}</div>
+    <img class="photo-hero" src="${photoUrl(w.title)}" alt="${w.title}" />
     <p class="muted center">${w.place} · ${w.durationLabel}</p>
     <p class="mb center">${w.description}</p>
     ${prev ? `<div class="card highlight">
