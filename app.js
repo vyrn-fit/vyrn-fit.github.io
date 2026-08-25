@@ -52,6 +52,9 @@ function photoKey(name) {
 function photoUrl(name) {
   return '/assets/exercises/' + photoKey(name) + '.jpg?v=16';
 }
+function videoUrl(name) {
+  return '/assets/videos/' + photoKey(name) + '.mp4?v=1';
+}
 function iconFor(name) {
   return `<img class="photo-thumb" src="${photoUrl(name)}" alt="" loading="lazy" />`;
 }
@@ -680,16 +683,20 @@ function renderWorkoutRun() {
   const ex = w.exercises[exerciseIndex];
   const total = w.exercises.length;
   const label = phase === 'work' ? (ex?.name || '') : phase === 'rest' ? 'Rest' : phase === 'done' ? 'Session complete' : 'Get ready';
-  const ico = phase === 'rest'
-    ? iconSvg('stretch', 'icon-svg-lg')
-    : phase === 'done'
-      ? '<span class="icon-svg-lg" style="font-size:48px;line-height:64px">✓</span>'
-      : iconSvg(ex?.name, 'icon-svg-lg');
+  const mediaName = phase === 'rest' ? 'stretch' : (ex?.name || w.title);
+  let stageMedia;
+  if (phase === 'done') {
+    stageMedia = '<div class="ex-done-mark">✓</div>';
+  } else if (phase === 'work' || phase === 'ready') {
+    stageMedia = `<video class="ex-video" src="${videoUrl(mediaName)}" poster="${photoUrl(mediaName)}" autoplay muted loop playsinline webkit-playsinline></video>`;
+  } else {
+    stageMedia = `<img class="photo-stage" src="${photoUrl(mediaName)}" alt="" />`;
+  }
   const pct = ((exerciseIndex + (phase === 'rest' ? 0.5 : phase === 'done' ? 1 : 0)) / total) * 100;
   return `<div class="screen center workout-focus fade-in">
     <p class="muted">${w.title} · ${Math.min(exerciseIndex + 1, total)}/${total}</p>
     <div class="ex-stage ${phase}">
-      <div class="ex-icon-lg ${phase === 'work' ? 'bounce' : ''}">${ico}</div>
+      ${stageMedia}
     </div>
     <div class="timer-display big${phaseSeconds <= 5 && phase !== 'ready' && phase !== 'done' ? ' urgent' : ''}" id="phase-timer">${formatTime(phaseSeconds)}</div>
     <h2 id="phase-label">${label}</h2>
