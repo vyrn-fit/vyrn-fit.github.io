@@ -29,22 +29,28 @@ const store = {
 // Exercise photos (free stock — Unsplash / Pexels)
 function photoKey(name) {
   const n = (name || '').toLowerCase();
-  if (/office|desk|chair|posture|seated|wall sit|neck|chin|thoracic|shoulder blade/.test(n)) return 'office';
-  if (/squat|sumo|pulse|wall sit/.test(n)) return 'squat';
+  // Workout titles first
+  if (/office|desk|posture|afternoon energy/.test(n)) return 'office';
+  if (/playground|park power/.test(n)) return 'park';
+  if (/full body|morning|wake|hotel|travel|micro/.test(n)) return 'home';
+  if (/core focus|core/.test(n)) return 'core';
+  if (/mobility|stretch|yoga/.test(n)) return 'stretch';
+  if (/hiit|express|legs|upper|strength/.test(n)) return 'strength';
+  // Exercise names
+  if (/chair|seated|wall sit|neck|chin|thoracic|shoulder blade/.test(n)) return 'office';
+  if (/squat|sumo|pulse/.test(n)) return 'squat';
   if (/push|dip|pike|diamond|incline/.test(n)) return 'pushup';
   if (/plank|hollow|dead bug|bird|shoulder tap/.test(n)) return 'plank';
   if (/lunge|step-up|step up/.test(n)) return 'lunge';
-  if (/jog|run|march|high knee|walk|sprint|park|perimeter/.test(n)) return 'run';
-  if (/stretch|mobility|open|roll|fold|circle|breath|yoga|hamstring|ankle|hip|cool|toe reach|arm circle|side bend/.test(n)) return 'stretch';
-  if (/bridge|superman|tabletop|core|glute/.test(n)) return 'core';
-  if (/jump|burpee|jack|climber|broad|hiit/.test(n)) return 'jump';
-  if (/playground|bench|hang|bar/.test(n)) return 'park';
-  if (/home|full body|morning|hotel|travel/.test(n)) return 'home';
-  if (/strength|upper|legs/.test(n)) return 'strength';
+  if (/jog|run|march|high knee|walk|sprint|perimeter/.test(n)) return 'run';
+  if (/open|roll|fold|circle|breath|hamstring|ankle|hip|cool|toe reach|arm circle|side bend/.test(n)) return 'stretch';
+  if (/bridge|superman|tabletop|glute/.test(n)) return 'core';
+  if (/jump|burpee|jack|climber|broad/.test(n)) return 'jump';
+  if (/bench|hang|bar/.test(n)) return 'park';
   return 'default';
 }
 function photoUrl(name) {
-  return '/assets/exercises/' + photoKey(name) + '.jpg';
+  return '/assets/exercises/' + photoKey(name) + '.jpg?v=11';
 }
 function iconFor(name) {
   return `<img class="photo-thumb" src="${photoUrl(name)}" alt="" loading="lazy" />`;
