@@ -25,22 +25,29 @@ const store = {
   }
 };
 
-// Exercise visual cues (original icon language — not licensed stock)
-const EX_ICON = {
-  default: '💪',
-  squat: '🦵', lunges: '🦵', 'wall sit': '🧱', 'calf': '🦶',
-  'push-up': '🫸', push: '🫸', dip: '🪑',
-  plank: '🧘', core: '🔥', 'dead bug': '🐛', 'bird dog': '🐦', hollow: '🌀',
-  'jumping': '⭐', mountain: '⛰️', burpee: '⚡', 'high knee': '🏃', march: '🚶',
-  bridge: '🌉', superman: '🦸', stretch: '🧘', hang: '🪝', step: '📶', jog: '🏃',
-  twist: '🔄', neck: '💆', hip: '⭕', chair: '🪑', desk: '💼'
-};
-function iconFor(name) {
+// Exercise visual cues — SVG icons (original line style)
+function iconKey(name) {
   const n = (name || '').toLowerCase();
-  for (const k of Object.keys(EX_ICON)) {
-    if (k !== 'default' && n.includes(k)) return EX_ICON[k];
-  }
-  return EX_ICON.default;
+  if (/squat|wall sit|sumo|pulse/.test(n)) return 'squat';
+  if (/push|dip|pike|diamond|shoulder tap/.test(n)) return 'pushup';
+  if (/plank|hollow|dead bug|bird|core/.test(n)) return 'plank';
+  if (/lunge|step-up|step up/.test(n)) return 'lunge';
+  if (/jog|run|march|high knee|walk|sprint/.test(n)) return 'run';
+  if (/stretch|mobility|open|roll|fold|circle|breath|cat-cow|chin|thoracic|hamstring|ankle|hip flexor|neck|shoulder blade|chest opener|side bend|arm circle|toe reach/.test(n)) return 'stretch';
+  if (/bridge|superman|tabletop/.test(n)) return 'core';
+  if (/jump|burpee|jack|climber|broad/.test(n)) return 'jump';
+  return 'default';
+}
+function iconSvg(name, sizeClass) {
+  const key = iconKey(name);
+  const icons = window.VYRN_ICONS || {};
+  const svg = icons[key] || icons.default || '';
+  const cls = sizeClass || 'icon-svg';
+  return `<span class="${cls}" aria-hidden="true">${svg}</span>`;
+}
+function iconFor(name) {
+  // legacy string for places that still expect emoji-like content — return SVG wrapper
+  return iconSvg(name, 'icon-svg-sm');
 }
 
 const WORKOUTS = {
@@ -451,8 +458,7 @@ function renderTabBar(active) {
 
 function renderWelcome() {
   return `<div class="screen center fade-in">
-    <div class="logo-big pulse-soft">VYRN</div>
-    <p class="tagline">Show up. Put in the work.</p>
+    <img class="brand-logo" src="/assets/logo.png" alt="Vyrn — show up. put in the work" />
     <p class="muted">Home · Office · Playground — no special gear</p>
     <div class="btn-stack">
       <button class="btn primary" data-go="login">Sign in / Sign up</button>
@@ -463,7 +469,7 @@ function renderWelcome() {
 
 function renderLogin() {
   return `<div class="screen center fade-in">
-    <div class="logo-sm">VYRN</div>
+    <img class="brand-logo-sm" src="/assets/logo.png" alt="Vyrn" />
     <h2>Welcome</h2>
     <p class="muted mb">Sign in to sync history across devices</p>
     <div class="btn-stack" style="max-width:340px">
@@ -563,7 +569,7 @@ function renderWorkoutDetail() {
       <button class="back" data-go="library">←</button>
       <h2>${w.title}</h2>
     </div>
-    <div class="hero-icon">${iconFor(w.title)}</div>
+    <div class="hero-icon">${iconSvg(w.title, "icon-svg-lg")}</div>
     <p class="muted center">${w.place} · ${w.durationLabel}</p>
     <p class="mb center">${w.description}</p>
     ${prev ? `<div class="card highlight">
@@ -593,7 +599,11 @@ function renderWorkoutRun() {
   const ex = w.exercises[exerciseIndex];
   const total = w.exercises.length;
   const label = phase === 'work' ? (ex?.name || '') : phase === 'rest' ? 'Rest' : phase === 'done' ? 'Session complete' : 'Get ready';
-  const ico = phase === 'rest' ? '😮‍💨' : phase === 'done' ? '✅' : iconFor(ex?.name);
+  const ico = phase === 'rest'
+    ? iconSvg('stretch', 'icon-svg-lg')
+    : phase === 'done'
+      ? '<span class="icon-svg-lg" style="font-size:48px;line-height:64px">✓</span>'
+      : iconSvg(ex?.name, 'icon-svg-lg');
   const pct = ((exerciseIndex + (phase === 'rest' ? 0.5 : phase === 'done' ? 1 : 0)) / total) * 100;
   return `<div class="screen center workout-focus fade-in">
     <p class="muted">${w.title} · ${Math.min(exerciseIndex + 1, total)}/${total}</p>
@@ -624,7 +634,7 @@ function renderHistory() {
   return `<div class="screen fade-in">
     <div class="topbar"><h2>History</h2></div>
     ${!currentUser || currentUser.isGuest
-      ? `<p class="muted mb">Guest data stays on this device. <a href="#" data-go="login" style="color:#22c55e">Sign in</a> to sync.</p>`
+      ? `<p class="muted mb">Guest data stays on this device. <a href="#" data-go="login" style="color:#ff3b2f">Sign in</a> to sync.</p>`
       : `<p class="muted mb">Signed in — cloud sync when available</p>`}
     ${dates.length === 0
       ? `<div class="card"><p class="muted center">No sessions yet. Complete a workout to see it here.</p></div>`

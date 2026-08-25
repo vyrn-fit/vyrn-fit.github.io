@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1" />
-  <meta name="theme-color" content="#0a0a0a" />
+  <meta name="theme-color" content="#c41e12" />
   <meta name="description" content="Vyrn — Show up. Put in the work. Equipment-free training + weekly challenges." />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -21,8 +21,10 @@
       --text: #fafafa;
       --muted: #a3a3a3;
       --dim: #737373;
-      --green: #22c55e;
-      --green-dim: #16a34a;
+      --green: #ff3b2f;
+      --accent: #ff6b35;
+      --fire: #ff9f1c;
+      --green-dim: #e6352a;
     }
     html, body {
       height: 100%;
@@ -88,7 +90,7 @@
     }
     .card.tight { padding: 0; overflow: hidden; }
     .card.tight-pad { padding: 8px 14px; }
-    .card.highlight { border-color: #22c55e55; background: linear-gradient(135deg, #141414, #0f1a12); }
+    .card.highlight { border-color: #ff3b2f55; background: linear-gradient(135deg, #141414, #1a0f0e); }
     .topbar { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
     .back { background: none; border: none; color: var(--muted); font-size: 22px; cursor: pointer; padding: 4px 8px; }
     .stats { display: flex; gap: 10px; }
@@ -138,19 +140,19 @@
     .ex-ico-sm { font-size: 18px; width: 28px; text-align: center; flex-shrink: 0; }
     .hero-icon {
       font-size: 64px; text-align: center; margin: 8px 0 12px;
-      filter: drop-shadow(0 8px 24px rgba(34,197,94,0.2));
+      filter: drop-shadow(0 8px 24px rgba(255,59,47,0.2));
     }
     .ex-stage {
       width: 120px; height: 120px; border-radius: 28px;
-      background: radial-gradient(circle at 30% 30%, #1a2e1a, #141414);
+      background: radial-gradient(circle at 30% 30%, #2a1512, #141414);
       border: 1px solid var(--border);
       display: flex; align-items: center; justify-content: center;
       margin: 12px auto;
       transition: border-color 0.3s, box-shadow 0.3s;
     }
-    .ex-stage.work { border-color: #22c55e66; box-shadow: 0 0 32px rgba(34,197,94,0.15); }
+    .ex-stage.work { border-color: #ff3b2f66; box-shadow: 0 0 32px rgba(255,59,47,0.15); }
     .ex-stage.rest { border-color: #3b82f666; }
-    .ex-stage.done { border-color: #22c55e; }
+    .ex-stage.done { border-color: #ff3b2f; }
     .ex-icon-lg { font-size: 52px; }
     .ex-icon-lg.bounce { animation: bounce 0.9s ease infinite; }
     @keyframes bounce {
@@ -158,7 +160,7 @@
       50% { transform: translateY(-6px); }
     }
     .pro-tag {
-      display: inline-block; background: #22c55e22; color: var(--green);
+      display: inline-block; background: #ff3b2f22; color: var(--green);
       font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px;
       vertical-align: middle;
     }
@@ -166,7 +168,7 @@
       background: var(--card); border: 1px solid var(--border); color: var(--muted);
       font-size: 11px; padding: 4px 10px; border-radius: 999px;
     }
-    .badge.pro { color: var(--green); border-color: #22c55e44; }
+    .badge.pro { color: var(--green); border-color: #ff3b2f44; }
     .section { font-size: 13px; color: var(--dim); text-transform: uppercase;
       letter-spacing: 0.5px; margin: 20px 0 8px; }
     .progress-bar {
@@ -174,7 +176,7 @@
       border-radius: 3px; margin: 20px auto; overflow: hidden;
     }
     .progress-fill { height: 100%; background: var(--green); transition: width 0.3s ease; border-radius: 3px; }
-    .better { color: #22c55e; font-size: 12px; font-weight: 600; }
+    .better { color: #ff3b2f; font-size: 12px; font-weight: 600; }
     .slower { color: #f59e0b; font-size: 12px; font-weight: 600; }
     .toggle-row {
       display: flex; justify-content: space-between; align-items: center;
@@ -186,7 +188,7 @@
       border-radius: 999px; padding: 6px 14px; font-size: 13px; font-weight: 600;
       cursor: pointer; font-family: inherit; min-width: 52px;
     }
-    .toggle.on { background: #14532d; color: var(--green); border-color: #22c55e55; }
+    .toggle.on { background: #3d1512; color: var(--green); border-color: #ff3b2f55; }
     .tabbar {
       position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
       width: 100%; max-width: 480px; background: rgba(10,10,10,0.92);
@@ -205,11 +207,40 @@
       text-align: center; padding: 24px 12px 120px; font-size: 12px; color: #525252;
     }
     .legal-footer a { color: #737373; text-decoration: none; margin: 0 6px; }
-    .workout-focus { background: radial-gradient(ellipse at top, #111 0%, #0a0a0a 55%); }
+
+    .brand-logo {
+      width: min(280px, 85vw); height: auto; border-radius: 16px;
+      margin: 0 auto 16px; display: block;
+      box-shadow: 0 12px 40px rgba(255,59,47,0.25);
+    }
+    .brand-logo-sm {
+      width: 120px; height: auto; border-radius: 10px; margin: 0 auto 12px; display: block;
+    }
+    .icon-svg {
+      width: 28px; height: 28px; color: #ff3b2f; display: block;
+    }
+    .icon-svg-lg {
+      width: 64px; height: 64px; color: #ff6b35; display: block;
+    }
+    .icon-svg-sm {
+      width: 22px; height: 22px; color: #ff6b35; flex-shrink: 0;
+    }
+    .ex-ico {
+      background: linear-gradient(145deg, #1f1210, #140c0b) !important;
+      border: 1px solid #3d2018;
+    }
+    .ex-stage {
+      background: radial-gradient(circle at 30% 30%, #3d1810, #140c0b) !important;
+    }
+    .workout-focus {
+      background: radial-gradient(ellipse at top, #1a0a08 0%, #0a0a0a 55%) !important;
+    }
+    .workout-focus { background: radial-gradient(ellipse at top, #1a0a08 0%, #0a0a0a 55%); }
   </style>
 </head>
 <body>
   <div id="app"></div>
+  <script src="/assets/icons/exercises.js"></script>
   <script src="/app.js"></script>
   <script>
     if ('serviceWorker' in navigator) {
