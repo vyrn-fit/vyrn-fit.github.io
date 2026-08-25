@@ -50,7 +50,7 @@ function photoKey(name) {
   return 'default';
 }
 function photoUrl(name) {
-  return '/assets/exercises/' + photoKey(name) + '.jpg?v=14';
+  return '/assets/exercises/' + photoKey(name) + '.jpg?v=15';
 }
 function iconFor(name) {
   return `<img class="photo-thumb" src="${photoUrl(name)}" alt="" loading="lazy" />`;
