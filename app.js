@@ -50,7 +50,7 @@ function photoKey(name) {
   return 'default';
 }
 function photoUrl(name) {
-  return '/assets/exercises/' + photoKey(name) + '.jpg?v=17';
+  return '/assets/exercises/' + photoKey(name) + '.jpg?v=20';
 }
 function videoUrl(name) {
   return '/assets/videos/' + photoKey(name) + '.mp4?v=3';
@@ -697,7 +697,8 @@ function renderWorkoutRun() {
   if (phase === 'done') {
     stageMedia = '<div class="ex-done-mark">✓</div>';
   } else if (phase === 'work' || phase === 'ready') {
-    stageMedia = `<video class="ex-video" src="${videoUrl(mediaName)}" poster="${photoUrl(mediaName)}" autoplay muted loop playsinline webkit-playsinline preload="auto"></video>`;
+    // CSS motion loop — reliable on all mobile browsers (no autoplay block)
+    stageMedia = `<div class="ex-motion"><img class="photo-stage motion-loop" src="${photoUrl(mediaName)}" alt="" /></div>`;
   } else {
     stageMedia = `<img class="photo-stage" src="${photoUrl(mediaName)}" alt="" />`;
   }

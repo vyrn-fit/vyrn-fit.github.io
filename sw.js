@@ -1,4 +1,4 @@
-const CACHE = 'vyrn-v19';
+const CACHE = 'vyrn-v20';
 const ASSETS = ['/', '/index.html', '/app.js', '/site.js', '/manifest.json', '/assets/logo.png'];
 
 self.addEventListener('install', (e) => {
