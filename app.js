@@ -611,9 +611,9 @@ function renderHome() {
       <p class="muted mb">Pick a free session for where you are</p>
       ${freeList.map(w => `
         <button class="list-btn" data-workout="${w.id}">
-          <span class="ex-ico">${iconFor(w.title)}</span>
-          <span class="list-text"><strong>${w.title}</strong><br><span class="muted">${w.place} · ${w.durationLabel}</span></span>
-          <span class="chev">→</span>
+          ${iconFor(w.title)}
+          <span class="list-text"><strong>${w.title}</strong><span class="muted">${w.place} · ${w.durationLabel}</span></span>
+          <span class="chev">›</span>
         </button>
       `).join('')}
     </div>
@@ -635,13 +635,12 @@ function renderLibrary() {
         ${items.map(w => `
           <div class="card tight-pad">
             <button class="list-btn" data-workout="${w.id}">
-              <span class="ex-ico">${iconFor(w.title)}</span>
+              ${iconFor(w.title)}
               <span class="list-text">
-                <strong>${w.title}</strong>
-                ${!w.free && !isPro ? ' <span class="pro-tag">PRO</span>' : ''}
-                <br><span class="muted">${w.durationLabel} · ${w.description}</span>
+                <strong>${w.title}${!w.free && !isPro ? ' <span class="pro-tag">PRO</span>' : ''}</strong>
+                <span class="muted">${w.durationLabel} · ${w.place}</span>
               </span>
-              <span class="chev">→</span>
+              <span class="chev">›</span>
             </button>
           </div>
         `).join('')}`;
