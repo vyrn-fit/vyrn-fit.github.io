@@ -49,8 +49,33 @@ function photoKey(name) {
   if (/bench|hang|bar/.test(n)) return 'park';
   return 'default';
 }
+
+// Instructional cues (BetterMe-style: clear form, not brand mood)
+const FORM_TIPS = {
+  squat: 'Feet shoulder-width. Sit hips back. Knees track over toes. Chest up.',
+  pushup: 'Hands under shoulders. Body in a straight line. Lower chest, then press up.',
+  plank: 'Elbows under shoulders. Squeeze glutes. Keep hips level — no sag or pike.',
+  lunge: 'Step back. Front knee over ankle. Back knee drops toward floor. Torso tall.',
+  run: 'Light feet. Soft knees. Arms swing opposite legs. Stay upright.',
+  stretch: 'Move slowly. Breathe out into the stretch. No bouncing.',
+  jump: 'Soft landing. Knees bent. Use arms for momentum. Land quiet.',
+  core: 'Lower back pressed down. Ribs down. Slow controlled movement.',
+  office: 'Back flat to wall. Thighs parallel if possible. Knees over ankles.',
+  park: 'Full foot on bench. Drive through heel. Control the step down.',
+  home: 'Full range you can control. Quality over speed.',
+  default: 'Controlled tempo. Full range. Stop if form breaks.',
+  strength: 'Hands under shoulders. Straight body. Full lockout at top.',
+  burpee: 'Hands down, jump feet back, chest near floor, jump feet in, stand.',
+  yoga: 'Slow breathing. Stack joints. Ease into range — never force.',
+  gym: 'Brace core. Own the movement. Stop one rep before form fails.'
+};
+
+function formTipFor(name) {
+  return FORM_TIPS[photoKey(name)] || FORM_TIPS.default;
+}
+
 function photoUrl(name) {
-  return '/assets/exercises/' + photoKey(name) + '.jpg?v=20';
+  return '/assets/exercises/' + photoKey(name) + '.jpg?v=23';
 }
 function videoUrl(name) {
   return '/assets/videos/' + photoKey(name) + '.mp4?v=3';
@@ -671,8 +696,8 @@ function renderWorkoutDetail() {
     <div class="exercise-list">
       ${w.exercises.map((e, i) => `
         <div class="ex-item">
-          <span class="ex-ico-sm">${iconFor(e.name)}</span>
-          <span>${i + 1}. ${e.name}</span>
+          ${iconFor(e.name)}
+          <span class="ex-item-text"><strong>${i + 1}. ${e.name}</strong><span class="muted form-line">${formTipFor(e.name)}</span></span>
           <span class="muted">${e.duration}s</span>
         </div>
       `).join('')}
@@ -709,7 +734,15 @@ function renderWorkoutRun() {
     </div>
     <div class="timer-display big${phaseSeconds <= 5 && phase !== 'ready' && phase !== 'done' ? ' urgent' : ''}" id="phase-timer">${formatTime(phaseSeconds)}</div>
     <h2 id="phase-label">${label}</h2>
-    <p class="muted" id="phase-hint">${phase === 'work' ? 'Keep moving' : phase === 'rest' ? 'Breathe' : phase === 'done' ? 'Nice work' : 'Voice + sound on by default'}</p>
+    <p class="form-tip" id="phase-hint">${
+      phase === 'work' || phase === 'ready'
+        ? formTipFor(ex?.name || w.title)
+        : phase === 'rest'
+          ? 'Rest. Shake out. Breathe.'
+          : phase === 'done'
+            ? 'Nice work — form over speed.'
+            : 'Voice + sound on by default'
+    }</p>
     <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
     ${phase === 'ready' ? renderMusicBar(true) : ''}
     <div class="btn-stack">
