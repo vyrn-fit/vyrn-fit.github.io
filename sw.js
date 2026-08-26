@@ -1,4 +1,4 @@
-const CACHE = 'vyrn-v24';
+const CACHE = 'vyrn-v25';
 const ASSETS = ['/', '/index.html', '/app.js', '/site.js', '/manifest.json', '/assets/logo.png'];
 
 self.addEventListener('install', (e) => {
@@ -17,7 +17,7 @@ self.addEventListener('fetch', (e) => {
   if (e.request.method !== 'GET') return;
   const url = new URL(e.request.url);
   // Never intercept video/audio with HTML fallback — let browser load media directly
-  if (url.pathname.match(/\.(mp4|webm|mov|mp3|wav)(\?|$)/i)) {
+  if (url.pathname.match(/\.(mp4|webm|mov|mp3|wav|glb|gltf)(\?|$)/i)) {
     e.respondWith(fetch(e.request));
     return;
   }
