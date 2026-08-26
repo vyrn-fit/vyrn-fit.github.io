@@ -15,6 +15,7 @@ let isPro = false;
 let voiceEnabled = true;
 let sfxEnabled = true;
 let musicHintDismissed = false;
+let form3dViewer = null;
 let audioCtx = null;
 
 const store = {
@@ -551,6 +552,13 @@ function render() {
     v.addEventListener('loadeddata', tryPlay, { once: true });
     tryPlay();
   });
+  // Mount 3D form demo when present
+  if (form3dViewer) { try { form3dViewer.destroy(); } catch (_) {} form3dViewer = null; }
+  const root3d = document.getElementById('form3d-root');
+  if (root3d && window.VyrnForm3D) {
+    form3dViewer = window.VyrnForm3D.createViewer(root3d, root3d.getAttribute('data-ex') || 'default');
+  }
+
 }
 
 function renderLegalFooter() {
@@ -721,8 +729,7 @@ function renderWorkoutRun() {
   if (phase === 'done') {
     stageMedia = '<div class="ex-done-mark">✓</div>';
   } else if (phase === 'work' || phase === 'ready') {
-    // CSS motion loop — reliable on all mobile browsers (no autoplay block)
-    stageMedia = `<div class="ex-motion"><img class="photo-stage motion-loop" src="${photoUrl(mediaName)}" alt="" /></div>`;
+    stageMedia = `<div class="form3d-stage" id="form3d-root" data-ex="${photoKey(mediaName)}"></div>`;
   } else {
     stageMedia = `<img class="photo-stage" src="${photoUrl(mediaName)}" alt="" />`;
   }
