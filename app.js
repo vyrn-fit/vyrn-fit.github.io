@@ -15,7 +15,6 @@ let isPro = false;
 let voiceEnabled = true;
 let sfxEnabled = true;
 let musicHintDismissed = false;
-let form3dViewer = null;
 let audioCtx = null;
 
 const store = {
@@ -316,7 +315,6 @@ const WORKOUTS = {
   }
 };
 
-
 const DEFAULT_CHALLENGE = {
   id: 'local-1',
   title: 'Forge Circuit #1',
@@ -403,7 +401,6 @@ function speak(text) {
   } catch (_) {}
 }
 
-
 function renderMusicBar(compact) {
   const spotifyUrl = 'https://open.spotify.com/search/workout%20focus';
   const appleUrl = 'https://music.apple.com/search?term=workout';
@@ -424,7 +421,6 @@ function renderMusicBar(compact) {
     <p class="music-tip muted">Tip: start a playlist, return here, then hit Begin. Voice cues stay on top.</p>
   </div>`;
 }
-
 
 // —— Helpers ——
 function $(sel) { return document.querySelector(sel); }
@@ -553,10 +549,6 @@ function render() {
     tryPlay();
   });
   // Mount 3D form demo when present
-  if (form3dViewer) { try { form3dViewer.destroy(); } catch (_) {} form3dViewer = null; }
-  const root3d = document.getElementById('form3d-root');
-  if (root3d && window.VyrnForm3D) {
-    form3dViewer = window.VyrnForm3D.createViewer(root3d, root3d.getAttribute('data-ex') || 'default');
   }
 
 }
@@ -729,7 +721,7 @@ function renderWorkoutRun() {
   if (phase === 'done') {
     stageMedia = '<div class="ex-done-mark">✓</div>';
   } else if (phase === 'work' || phase === 'ready') {
-    stageMedia = `<div class="form3d-stage" id="form3d-root" data-ex="${photoKey(mediaName)}"></div>`;
+    stageMedia = `<div class="ex-demo"><img class="photo-stage" src="${photoUrl(mediaName)}" alt="${mediaName}" /></div>`;
   } else {
     stageMedia = `<img class="photo-stage" src="${photoUrl(mediaName)}" alt="" />`;
   }
