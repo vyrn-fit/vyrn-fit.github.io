@@ -74,6 +74,68 @@ function formTipFor(name) {
   return FORM_TIPS[photoKey(name)] || FORM_TIPS.default;
 }
 
+
+// Workout Guide (CC BY-SA 4.0) — polished 3-frame form demos
+const WG_CDN = 'https://cdn.jsdelivr.net/npm/@bryllim/workout-guide@1.0.0/assets';
+const WG_MAP = {
+  squat: 'bodyweight-squat',
+  pushup: 'push-up',
+  plank: 'plank',
+  lunge: 'walking-lunge',
+  run: 'running',
+  jump: 'jumping-jack',
+  stretch: 'worlds-greatest-stretch',
+  core: 'plank',
+  office: 'wall-sit',
+  park: 'step-up',
+  home: 'bodyweight-squat',
+  default: 'push-up',
+  strength: 'push-up',
+  burpee: 'burpee',
+  yoga: 'cat-cow-stretch',
+  gym: 'push-up'
+};
+// Prefer pure bodyweight squat if available
+function wgSlug(name) {
+  const k = photoKey(name);
+  // bodyweight-squat may exist — try known list
+  const map = {
+    squat: 'bodyweight-squat',
+    pushup: 'push-up',
+    plank: 'plank',
+    lunge: 'reverse-lunge',
+    run: 'running',
+    jump: 'jumping-jack',
+    stretch: 'worlds-greatest-stretch',
+    core: 'plank',
+    office: 'wall-sit',
+    park: 'step-up',
+    home: 'bodyweight-squat',
+    strength: 'push-up',
+    burpee: 'burpee',
+    yoga: 'cat-cow-stretch',
+    gym: 'push-up',
+    default: 'push-up'
+  };
+  return map[k] || map.default;
+}
+function wgFrameUrl(slug, frame) {
+  return `${WG_CDN}/${slug}/frame-${frame}.png`;
+}
+function wgDemoHtml(name) {
+  const slug = wgSlug(name);
+  // 3 stacked frames; CSS animates opacity for smooth form cycle
+  return `<div class="wg-demo" data-wg="${slug}" role="img" aria-label="Form guide for ${name}">
+    <div class="wg-stage">
+      <img class="wg-frame f1" src="${wgFrameUrl(slug, 1)}" alt="" decoding="async" />
+      <img class="wg-frame f2" src="${wgFrameUrl(slug, 2)}" alt="" decoding="async" />
+      <img class="wg-frame f3" src="${wgFrameUrl(slug, 3)}" alt="" decoding="async" />
+      <div class="wg-glow"></div>
+    </div>
+    <p class="wg-credit">Form · Workout Guide · <span>CC BY-SA</span></p>
+  </div>`;
+}
+
 function photoUrl(name) {
   return '/assets/exercises/' + photoKey(name) + '.jpg?v=23';
 }
@@ -721,7 +783,7 @@ function renderWorkoutRun() {
   if (phase === 'done') {
     stageMedia = '<div class="ex-done-mark">✓</div>';
   } else if (phase === 'work' || phase === 'ready') {
-    stageMedia = `<div class="ex-demo"><img class="photo-stage" src="${photoUrl(mediaName)}" alt="${mediaName}" /></div>`;
+    stageMedia = wgDemoHtml(mediaName);
   } else {
     stageMedia = `<img class="photo-stage" src="${photoUrl(mediaName)}" alt="" />`;
   }

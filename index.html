@@ -1175,6 +1175,99 @@
       opacity: 0.7;
     }
 
+  
+    /* ═══ Workout Guide form demo — polished ═══ */
+    .wg-demo {
+      width: min(260px, 78vw);
+      margin: 4px auto 12px;
+      text-align: center;
+    }
+    .wg-stage {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 1;
+      border-radius: 22px;
+      overflow: hidden;
+      background:
+        radial-gradient(ellipse 70% 60% at 50% 42%, #2a1210 0%, #0c0a0a 72%);
+      border: 1px solid rgba(255, 59, 47, 0.22);
+      box-shadow:
+        0 0 0 1px rgba(255,255,255,0.03) inset,
+        0 16px 48px rgba(0,0,0,0.55),
+        0 0 40px rgba(255, 59, 47, 0.08);
+    }
+    .wg-frame {
+      position: absolute;
+      inset: 8%;
+      width: 84%;
+      height: 84%;
+      object-fit: contain;
+      filter:
+        brightness(0) invert(1)
+        drop-shadow(0 0 12px rgba(255, 59, 47, 0.35))
+        drop-shadow(0 4px 16px rgba(0,0,0,0.4));
+      opacity: 0;
+      transform: scale(0.96);
+      will-change: opacity, transform;
+    }
+    /* 3-frame form cycle ~2.4s */
+    .wg-frame.f1 {
+      animation: wgCycle 2.4s ease-in-out infinite;
+    }
+    .wg-frame.f2 {
+      animation: wgCycle 2.4s ease-in-out infinite;
+      animation-delay: -0.8s;
+    }
+    .wg-frame.f3 {
+      animation: wgCycle 2.4s ease-in-out infinite;
+      animation-delay: -1.6s;
+    }
+    @keyframes wgCycle {
+      0%   { opacity: 0; transform: scale(0.96); }
+      8%   { opacity: 1; transform: scale(1); }
+      28%  { opacity: 1; transform: scale(1.02); }
+      36%  { opacity: 0; transform: scale(1.04); }
+      100% { opacity: 0; transform: scale(0.96); }
+    }
+    .wg-glow {
+      pointer-events: none;
+      position: absolute;
+      inset: auto 15% 12% 15%;
+      height: 28%;
+      background: radial-gradient(ellipse at center, rgba(255,59,47,0.18), transparent 70%);
+      filter: blur(8px);
+    }
+    .wg-credit {
+      margin-top: 10px;
+      font-size: 10px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #525252;
+    }
+    .wg-credit span {
+      color: #737373;
+    }
+    /* During work phase, slightly stronger rim */
+    .ex-stage.work .wg-stage {
+      border-color: rgba(255, 59, 47, 0.4);
+      box-shadow:
+        0 0 0 1px rgba(255,59,47,0.08) inset,
+        0 16px 48px rgba(0,0,0,0.55),
+        0 0 48px rgba(255, 59, 47, 0.16);
+    }
+    .ex-stage {
+      width: auto !important;
+      height: auto !important;
+      background: transparent !important;
+      border: none !important;
+      box-shadow: none !important;
+      margin: 0 auto;
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .wg-frame.f1 { opacity: 1; animation: none; transform: scale(1); }
+      .wg-frame.f2, .wg-frame.f3 { display: none; }
+    }
+
   </style>
   <script>
     (function () {

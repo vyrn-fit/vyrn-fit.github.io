@@ -1,4 +1,4 @@
-const CACHE = 'vyrn-v28';
+const CACHE = 'vyrn-v30';
 const ASSETS = ['/', '/index.html', '/app.js', '/site.js', '/manifest.json', '/assets/logo.png'];
 
 self.addEventListener('install', (e) => {
@@ -16,11 +16,27 @@ self.addEventListener('activate', (e) => {
 self.addEventListener('fetch', (e) => {
   if (e.request.method !== 'GET') return;
   const url = new URL(e.request.url);
-  // Never intercept video/audio with HTML fallback — let browser load media directly
-  if (url.pathname.match(/\.(mp4|webm|mov|mp3|wav|glb|gltf)(\?|$)/i)) {
+
+  // External CDNs (Workout Guide, etc.) — network only, never HTML fallback
+  if (url.origin !== self.location.origin) {
     e.respondWith(fetch(e.request));
     return;
   }
+
+  // Media — direct network
+  if (url.pathname.match(/\.(mp4|webm|mov|mp3|wav|glb|gltf|png|jpg|jpeg|svg|webp)(\?|$)/i)) {
+    e.respondWith(
+      caches.match(e.request).then((c) => c || fetch(e.request).then((res) => {
+        if (res && res.status === 200) {
+          const copy = res.clone();
+          caches.open(CACHE).then((cache) => cache.put(e.request, copy));
+        }
+        return res;
+      }))
+    );
+    return;
+  }
+
   e.respondWith(
     caches.match(e.request).then((cached) => {
       if (cached) return cached;
@@ -29,7 +45,10 @@ self.addEventListener('fetch', (e) => {
         const copy = res.clone();
         caches.open(CACHE).then((c) => c.put(e.request, copy));
         return res;
-      }).catch(() => caches.match('/index.html'));
+      }).catch(() => {
+        if (e.request.mode === 'navigate') return caches.match('/index.html');
+        return new Response('', { status: 504 });
+      });
     })
   );
 });
