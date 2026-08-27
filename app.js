@@ -50,30 +50,108 @@ function photoKey(name) {
   return 'default';
 }
 
-// Instructional cues (BetterMe-style: clear form, not brand mood)
-const FORM_TIPS = {
-  squat: 'Feet shoulder-width. Sit hips back. Knees track over toes. Chest up.',
-  pushup: 'Hands under shoulders. Body in a straight line. Lower chest, then press up.',
-  plank: 'Elbows under shoulders. Squeeze glutes. Keep hips level — no sag or pike.',
-  lunge: 'Step back. Front knee over ankle. Back knee drops toward floor. Torso tall.',
-  run: 'Light feet. Soft knees. Arms swing opposite legs. Stay upright.',
-  stretch: 'Move slowly. Breathe out into the stretch. No bouncing.',
-  jump: 'Soft landing. Knees bent. Use arms for momentum. Land quiet.',
-  core: 'Lower back pressed down. Ribs down. Slow controlled movement.',
-  office: 'Back flat to wall. Thighs parallel if possible. Knees over ankles.',
-  park: 'Full foot on bench. Drive through heel. Control the step down.',
-  home: 'Full range you can control. Quality over speed.',
-  default: 'Controlled tempo. Full range. Stop if form breaks.',
-  strength: 'Hands under shoulders. Straight body. Full lockout at top.',
-  burpee: 'Hands down, jump feet back, chest near floor, jump feet in, stand.',
-  yoga: 'Slow breathing. Stack joints. Ease into range — never force.',
-  gym: 'Brace core. Own the movement. Stop one rep before form fails.'
+
+// Effective form guides — max 3 short steps (fitness-app pattern)
+const FORM_GUIDE = {
+  squat: {
+    focus: 'Sit hips back · chest up',
+    steps: ['Feet shoulder-width, toes slightly out', 'Sit hips back until thighs ~parallel', 'Drive through heels; stand tall'],
+    avoid: 'Knees caving in'
+  },
+  pushup: {
+    focus: 'Body in one straight line',
+    steps: ['Hands under shoulders, core tight', 'Lower chest toward floor', 'Press up without hips sagging'],
+    avoid: 'Hips piked or sagging'
+  },
+  plank: {
+    focus: 'Hips level · brace core',
+    steps: ['Elbows under shoulders', 'Squeeze glutes, ribs down', 'Breathe steady; hold the line'],
+    avoid: 'Hips too high or low'
+  },
+  lunge: {
+    focus: 'Front knee over ankle',
+    steps: ['Step back into a long stance', 'Drop back knee toward floor', 'Push through front heel to stand'],
+    avoid: 'Front knee past toes'
+  },
+  run: {
+    focus: 'Light feet · upright torso',
+    steps: ['Soft knees, quick cadence', 'Arms swing opposite legs', 'Stay tall; land quietly'],
+    avoid: 'Heavy heel striking'
+  },
+  jump: {
+    focus: 'Soft landing',
+    steps: ['Bend knees, arms ready', 'Explode up; full extension', 'Land quietly with bent knees'],
+    avoid: 'Locking knees on landing'
+  },
+  stretch: {
+    focus: 'Slow · no bouncing',
+    steps: ['Ease into the range', 'Breathe out into the stretch', 'Hold without forcing'],
+    avoid: 'Bouncing or pain'
+  },
+  core: {
+    focus: 'Controlled core',
+    steps: ['Lower back pressed down', 'Move slow and deliberate', 'Exhale on effort'],
+    avoid: 'Yank with momentum'
+  },
+  office: {
+    focus: 'Back flat to wall',
+    steps: ['Feet forward, back against wall', 'Slide down to ~90° if able', 'Hold; knees track over toes'],
+    avoid: 'Knees past toes'
+  },
+  park: {
+    focus: 'Control the step',
+    steps: ['Whole foot on the step', 'Drive through heel to stand', 'Step down with control'],
+    avoid: 'Pushing off toes only'
+  },
+  home: {
+    focus: 'Quality over speed',
+    steps: ['Full range you can control', 'Steady tempo', 'Stop if form breaks'],
+    avoid: 'Rushing reps'
+  },
+  strength: {
+    focus: 'Straight body line',
+    steps: ['Hands under shoulders', 'Lower with control', 'Full lockout at top'],
+    avoid: 'Partial range'
+  },
+  burpee: {
+    focus: 'Smooth sequence',
+    steps: ['Hands down, jump feet back', 'Chest toward floor', 'Jump feet in, stand or jump'],
+    avoid: 'Collapsing in the middle'
+  },
+  yoga: {
+    focus: 'Breathe with the move',
+    steps: ['Stack joints carefully', 'Move with the breath', 'Never force end range'],
+    avoid: 'Holding breath'
+  },
+  gym: {
+    focus: 'Brace · full control',
+    steps: ['Set core before the rep', 'Own the full range', 'Stop one rep before form fails'],
+    avoid: 'Ego range'
+  },
+  default: {
+    focus: 'Control the tempo',
+    steps: ['Set your start position', 'Move through full range', 'Finish each rep clean'],
+    avoid: 'Broken form'
+  }
 };
 
-function formTipFor(name) {
-  return FORM_TIPS[photoKey(name)] || FORM_TIPS.default;
+function formGuideFor(name) {
+  return FORM_GUIDE[photoKey(name)] || FORM_GUIDE.default;
 }
-
+function formTipFor(name) {
+  return formGuideFor(name).focus;
+}
+function formStepsHtml(name) {
+  const g = formGuideFor(name);
+  const steps = (g.steps || []).map((s, i) =>
+    `<li><span class="fs-num">${i + 1}</span><span class="fs-text">${s}</span></li>`
+  ).join('');
+  return `<div class="form-guide">
+    <p class="form-focus">${g.focus}</p>
+    <ol class="form-steps">${steps}</ol>
+    ${g.avoid ? `<p class="form-avoid">Avoid: ${g.avoid}</p>` : ''}
+  </div>`;
+}
 
 // Workout Guide (CC BY-SA 4.0) — polished 3-frame form demos
 const WG_CDN = 'https://cdn.jsdelivr.net/npm/@bryllim/workout-guide@1.0.0/assets';
@@ -122,17 +200,25 @@ function wgSlug(name) {
 function wgFrameUrl(slug, frame) {
   return `${WG_CDN}/${slug}/frame-${frame}.png`;
 }
-function wgDemoHtml(name) {
+function wgDemoHtml(name, opts = {}) {
   const slug = wgSlug(name);
-  // 3 stacked frames; CSS animates opacity for smooth form cycle
+  const labels = ['Setup', 'Move', 'Finish'];
+  const strip = [1, 2, 3].map((n) => `
+    <div class="wg-cell">
+      <div class="wg-cell-frame">
+        <img src="${wgFrameUrl(slug, n)}" alt="${labels[n - 1]}" decoding="async" />
+      </div>
+      <span class="wg-label">${labels[n - 1]}</span>
+    </div>`).join('');
   return `<div class="wg-demo" data-wg="${slug}" role="img" aria-label="Form guide for ${name}">
-    <div class="wg-stage">
+    <div class="wg-stage wg-stage-hero">
       <img class="wg-frame f1" src="${wgFrameUrl(slug, 1)}" alt="" decoding="async" />
       <img class="wg-frame f2" src="${wgFrameUrl(slug, 2)}" alt="" decoding="async" />
       <img class="wg-frame f3" src="${wgFrameUrl(slug, 3)}" alt="" decoding="async" />
       <div class="wg-glow"></div>
     </div>
-    <p class="wg-credit">Form · Workout Guide · <span>CC BY-SA</span></p>
+    <div class="wg-strip" aria-hidden="true">${strip}</div>
+    <p class="wg-credit">Form guide · Workout Guide · CC BY-SA</p>
   </div>`;
 }
 
@@ -759,7 +845,7 @@ function renderWorkoutDetail() {
       ${w.exercises.map((e, i) => `
         <div class="ex-item">
           ${iconFor(e.name)}
-          <span class="ex-item-text"><strong>${i + 1}. ${e.name}</strong><span class="muted form-line">${formTipFor(e.name)}</span></span>
+          <span class="ex-item-text"><strong>${i + 1}. ${e.name}</strong><span class="muted form-line">${formGuideFor(e.name).focus}</span></span>
           <span class="muted">${e.duration}s</span>
         </div>
       `).join('')}
@@ -788,22 +874,22 @@ function renderWorkoutRun() {
     stageMedia = `<img class="photo-stage" src="${photoUrl(mediaName)}" alt="" />`;
   }
   const pct = ((exerciseIndex + (phase === 'rest' ? 0.5 : phase === 'done' ? 1 : 0)) / total) * 100;
-  return `<div class="screen center workout-focus fade-in">
+  return `<div class="screen center workout-focus fade-in phase-${phase}">
     <p class="muted">${w.title} · ${Math.min(exerciseIndex + 1, total)}/${total}</p>
     <div class="ex-stage ${phase}">
       ${stageMedia}
     </div>
     <div class="timer-display big${phaseSeconds <= 5 && phase !== 'ready' && phase !== 'done' ? ' urgent' : ''}" id="phase-timer">${formatTime(phaseSeconds)}</div>
     <h2 id="phase-label">${label}</h2>
-    <p class="form-tip" id="phase-hint">${
-      phase === 'work' || phase === 'ready'
-        ? formTipFor(ex?.name || w.title)
+    ${
+      phase === 'ready' || phase === 'work'
+        ? formStepsHtml(ex?.name || mediaName)
         : phase === 'rest'
-          ? 'Rest. Shake out. Breathe.'
+          ? '<p class="form-focus rest-cue">Rest · shake out · breathe</p>'
           : phase === 'done'
-            ? 'Nice work — form over speed.'
-            : 'Voice + sound on by default'
-    }</p>
+            ? '<p class="form-focus rest-cue">Nice work — form over speed</p>'
+            : ''
+    }
     <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
     ${phase === 'ready' ? renderMusicBar(true) : ''}
     <div class="btn-stack">

@@ -1268,6 +1268,174 @@
       .wg-frame.f2, .wg-frame.f3 { display: none; }
     }
 
+  
+    /* ═══ Effective exercise diagrams + form UI ═══ */
+    .wg-demo { width: min(300px, 88vw); margin: 0 auto 10px; }
+    .wg-stage-hero {
+      aspect-ratio: 1;
+      max-height: 200px;
+      margin: 0 auto;
+    }
+    .wg-strip {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .wg-cell {
+      text-align: center;
+    }
+    .wg-cell-frame {
+      aspect-ratio: 1;
+      border-radius: 12px;
+      background: #120e0e;
+      border: 1px solid #2a2a2a;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 6px;
+    }
+    .wg-cell-frame img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      filter: brightness(0) invert(1);
+      opacity: 0.92;
+    }
+    .wg-label {
+      display: block;
+      margin-top: 5px;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: #737373;
+    }
+    /* Form guide panel — NTC / Freeletics style */
+    .form-guide {
+      max-width: 320px;
+      margin: 0 auto 14px;
+      text-align: left;
+      padding: 12px 14px;
+      border-radius: 14px;
+      background: #111;
+      border: 1px solid #1f1f1f;
+    }
+    .form-focus {
+      font-size: 14px;
+      font-weight: 700;
+      color: #fff;
+      margin: 0 0 10px;
+      letter-spacing: -0.01em;
+      text-align: center;
+    }
+    .form-focus.rest-cue {
+      background: none;
+      border: none;
+      padding: 0;
+      color: #a3a3a3;
+      font-weight: 500;
+      margin-bottom: 12px;
+    }
+    .form-steps {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .form-steps li {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+    }
+    .fs-num {
+      flex-shrink: 0;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #ff3b2f22;
+      color: #ff6b5a;
+      font-size: 11px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 1px;
+    }
+    .fs-text {
+      font-size: 13px;
+      line-height: 1.35;
+      color: #d4d4d4;
+    }
+    .form-avoid {
+      margin: 10px 0 0;
+      padding-top: 8px;
+      border-top: 1px solid #1f1f1f;
+      font-size: 11px;
+      color: #a3a3a3;
+      text-align: center;
+    }
+    .form-avoid::before {
+      content: "⚠ ";
+      color: #ff3b2f99;
+    }
+    /* Workout focus hierarchy */
+    .workout-focus .muted {
+      font-size: 12px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: #737373;
+    }
+    .workout-focus h2 {
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      margin: 2px 0 8px;
+    }
+    .workout-focus .timer-display.big {
+      font-size: clamp(48px, 14vw, 64px);
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      font-variant-numeric: tabular-nums;
+      margin: 6px 0 2px;
+    }
+    .workout-focus .progress-bar {
+      max-width: 280px;
+      height: 3px;
+      margin: 0 auto 16px;
+      background: #1a1a1a;
+      border-radius: 99px;
+      overflow: hidden;
+    }
+    .workout-focus .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #ff3b2f, #ff6b4a);
+      border-radius: 99px;
+      transition: width 0.35s ease;
+    }
+    /* During WORK: single focus cue only (can move eyes less) */
+    .workout-focus.phase-work .form-steps,
+    .workout-focus.phase-work .form-avoid,
+    .workout-focus.phase-work .wg-strip {
+      display: none;
+    }
+    .workout-focus.phase-work .form-guide {
+      padding: 8px 12px;
+      background: transparent;
+      border-color: transparent;
+    }
+    .workout-focus.phase-work .form-focus {
+      color: #ff8a7a;
+      margin: 0;
+      font-size: 13px;
+    }
+    .workout-focus.phase-ready .wg-stage-hero {
+      max-height: 160px;
+    }
+
   </style>
   <script>
     (function () {
