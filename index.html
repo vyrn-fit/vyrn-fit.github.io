@@ -1436,6 +1436,23 @@
       max-height: 160px;
     }
 
+  
+    .pr-demo { width: min(280px, 85vw); margin: 0 auto 10px; text-align: center; }
+    .pr-stage {
+      width: 100%; aspect-ratio: 3/4; max-height: 280px;
+      border-radius: 20px; overflow: hidden;
+      border: 1px solid rgba(255,59,47,0.28);
+      background: #0a0808;
+      box-shadow: 0 16px 48px rgba(0,0,0,0.5), 0 0 36px rgba(255,59,47,0.12);
+    }
+    .pr-video {
+      width: 100%; height: 100%; object-fit: cover; display: block;
+      background: #0a0808;
+    }
+    .workout-focus.phase-work .pr-stage {
+      border-color: rgba(255,59,47,0.45);
+    }
+
   </style>
   <script>
     (function () {

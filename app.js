@@ -200,6 +200,26 @@ function wgSlug(name) {
 function wgFrameUrl(slug, frame) {
   return `${WG_CDN}/${slug}/frame-${frame}.png`;
 }
+
+function prVideoUrl(name) {
+  const k = photoKey(name);
+  // Photoreal motion loops when available
+  const has = { squat:1, plank:1, lunge:1, pushup:1 };
+  if (!has[k]) return null;
+  return '/assets/videos/' + k + '.mp4?v=32';
+}
+function prDemoHtml(name) {
+  const vid = prVideoUrl(name);
+  const poster = photoUrl(name);
+  if (!vid) return null;
+  return `<div class="pr-demo">
+    <div class="pr-stage">
+      <video class="pr-video" src="${vid}" poster="${poster}" autoplay muted loop playsinline webkit-playsinline preload="auto"></video>
+    </div>
+    <p class="wg-credit">Photoreal form demo</p>
+  </div>`;
+}
+
 function wgDemoHtml(name, opts = {}) {
   const slug = wgSlug(name);
   const labels = ['Setup', 'Move', 'Finish'];
@@ -687,6 +707,14 @@ function render() {
   };
   app.innerHTML = (map[currentScreen] || renderWelcome)();
   bindEvents();
+
+  document.querySelectorAll('video.pr-video').forEach(v => {
+    v.muted = true;
+    v.playsInline = true;
+    const play = () => v.play().catch(() => {});
+    v.addEventListener('loadeddata', play, { once: true });
+    play();
+  });
   // Autoplay exercise loops (muted required by browsers)
   document.querySelectorAll('video.ex-video').forEach(v => {
     v.muted = true;
@@ -869,7 +897,7 @@ function renderWorkoutRun() {
   if (phase === 'done') {
     stageMedia = '<div class="ex-done-mark">✓</div>';
   } else if (phase === 'work' || phase === 'ready') {
-    stageMedia = wgDemoHtml(mediaName);
+    stageMedia = prDemoHtml(mediaName) || wgDemoHtml(mediaName);
   } else {
     stageMedia = `<img class="photo-stage" src="${photoUrl(mediaName)}" alt="" />`;
   }
