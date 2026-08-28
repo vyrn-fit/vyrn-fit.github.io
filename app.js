@@ -217,7 +217,7 @@ function wgSlug(name) {
   if (/hamstring|toe reach|fold/.test(n)) return 'toe-touch';
   if (/shoulder blade|scap/.test(n)) return 'band-pull-apart';
   if (/thoracic|rotation|torso/.test(n)) return 'torso-twist-stretch';
-  if (/world.?greatest|stretch flow|easy stretch|stretch & breathe|breathing stretch|cool-?down stretch/.test(n)) return 'worlds-greatest-stretch';
+  if (/^stretch$|world.?greatest|stretch flow|easy stretch|stretch & breathe|breathing stretch|cool-?down stretch/.test(n)) return 'worlds-greatest-stretch';
   if (/chair dip|bench dip/.test(n)) return 'chair-dip';
   if (/dead hang|active hang|scap pull/.test(n)) return 'active-hang';
   if (/calf/.test(n)) return 'standing-calf-raise';
@@ -230,7 +230,7 @@ function wgSlug(name) {
   if (/side bend/.test(n)) return 'dumbbell-side-bend';
   if (/neck|chin tuck|shoulder car|hip circle/.test(n)) return 'arm-circles';
 
-  return 'bodyweight-squat';
+  return 'plank';
 }
 function wgFrameUrl(slug, frame) {
   return `${WG_CDN}/${slug}/frame-${frame}.png`;
@@ -908,14 +908,23 @@ function renderWorkoutRun() {
   const ex = w.exercises[exerciseIndex];
   const total = w.exercises.length;
   const label = phase === 'work' ? (ex?.name || '') : phase === 'rest' ? 'Rest' : phase === 'done' ? 'Session complete' : 'Get ready';
-  const mediaName = phase === 'rest' ? 'stretch' : (ex?.name || w.title);
+  const mediaName = ex?.name || w.title;
   let stageMedia;
   if (phase === 'done') {
     stageMedia = '<div class="ex-done-mark">✓</div>';
-  } else if (phase === 'work' || phase === 'ready') {
-    stageMedia = wgDemoHtml(ex?.name || mediaName);
+  } else if (phase === 'rest') {
+    // Rest is NOT an exercise — show calm rest card, never form guides
+    const next = w.exercises[exerciseIndex + 1];
+    const nextHint = next ? `<p class="rest-next">Up next · ${next.name}</p>` : '';
+    stageMedia = `<div class="rest-card" role="img" aria-label="Rest">
+      <div class="rest-icon">◉</div>
+      <p class="rest-title">Rest</p>
+      <p class="rest-sub">Shake out · breathe · reset</p>
+      ${nextHint}
+    </div>`;
   } else {
-    stageMedia = wgDemoHtml(mediaName);
+    // work + ready → animated form guide for the current exercise
+    stageMedia = wgDemoHtml(ex?.name || mediaName);
   }
   const pct = ((exerciseIndex + (phase === 'rest' ? 0.5 : phase === 'done' ? 1 : 0)) / total) * 100;
   return `<div class="screen center workout-focus fade-in phase-${phase}">
