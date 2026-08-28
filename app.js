@@ -175,50 +175,69 @@ const WG_MAP = {
 };
 // Prefer pure bodyweight squat if available
 function wgSlug(name) {
-  const k = photoKey(name);
-  // bodyweight-squat may exist — try known list
-  const map = {
-    squat: 'bodyweight-squat',
-    pushup: 'push-up',
-    plank: 'plank',
-    lunge: 'reverse-lunge',
-    run: 'running',
-    jump: 'jumping-jack',
-    stretch: 'worlds-greatest-stretch',
-    core: 'plank',
-    office: 'wall-sit',
-    park: 'step-up',
-    home: 'bodyweight-squat',
-    strength: 'push-up',
-    burpee: 'burpee',
-    yoga: 'cat-cow-stretch',
-    gym: 'push-up',
-    default: 'push-up'
-  };
-  return map[k] || map.default;
+  const n = (name || '').toLowerCase();
+
+  // Chair / sit-to-stand — the animated style reference
+  if (/sit-to-stand|sit to stand|chair stand|desk chair|bench sit/.test(n)) return 'bodyweight-squat';
+
+  if (/wall push/.test(n)) return 'wall-push-up';
+  if (/incline push|knee push|knee ok/.test(n)) return 'knee-push-up';
+  if (/diamond|narrow push/.test(n)) return 'diamond-push-up';
+  if (/pike push/.test(n)) return 'pike-push-up';
+  if (/push-?ups?/.test(n)) return 'push-up';
+
+  if (/jump squat|squat jump/.test(n)) return 'jump-squat';
+  if (/wall sit/.test(n)) return 'wall-sit';
+  if (/squat/.test(n)) return 'bodyweight-squat';
+  if (/walking lunge/.test(n)) return 'walking-lunge';
+  if (/side lunge|lateral lunge/.test(n)) return 'lateral-lunge';
+  if (/lunge/.test(n)) return 'reverse-lunge';
+  if (/step-?up|bench step|park-bench step/.test(n)) return 'step-up';
+  if (/calf/.test(n)) return 'standing-calf-raise';
+
+  if (/side plank/.test(n)) return 'side-plank';
+  if (/plank shoulder|shoulder tap/.test(n)) return 'plank-shoulder-tap';
+  if (/plank/.test(n)) return 'plank';
+  if (/mountain climber/.test(n)) return 'mountain-climber';
+  if (/glute bridge/.test(n)) return 'glute-bridge';
+  if (/bird dog/.test(n)) return 'bird-dog';
+  if (/dead bug/.test(n)) return 'dead-bug';
+  if (/superman/.test(n)) return 'superman';
+  if (/hollow/.test(n)) return 'hollow-body-hold';
+  if (/russian twist|torso twist/.test(n)) return 'russian-twist';
+
+  if (/jumping jack|step-jack|step jack/.test(n)) return 'jumping-jack';
+  if (/burpee/.test(n)) return 'burpee';
+  if (/high knee/.test(n)) return 'high-knees';
+  if (/jog|run|walk the|cool-?down walk|march|standing marches/.test(n)) return 'walking';
+
+  if (/arm circle/.test(n)) return 'arm-circles';
+  if (/cat-?cow|seated cat/.test(n)) return 'cat-cow-stretch';
+  if (/hip flexor/.test(n)) return 'kneeling-hip-flexor-stretch';
+  if (/hamstring|toe reach|fold/.test(n)) return 'toe-touch';
+  if (/shoulder blade|scap/.test(n)) return 'band-pull-apart';
+  if (/thoracic|rotation|torso/.test(n)) return 'torso-twist-stretch';
+  if (/world.?greatest|stretch flow|easy stretch|stretch & breathe|breathing stretch|cool-?down stretch/.test(n)) return 'worlds-greatest-stretch';
+  if (/chair dip|bench dip/.test(n)) return 'chair-dip';
+  if (/dead hang|active hang|scap pull/.test(n)) return 'active-hang';
+  if (/calf/.test(n)) return 'standing-calf-raise';
+  if (/diamond|narrow/.test(n)) return 'diamond-push-up';
+  if (/pike|wall push/.test(n)) return 'wall-push-up';
+  if (/side plank/.test(n)) return 'side-plank';
+  if (/tabletop|reverse table/.test(n)) return 'glute-bridge';
+  if (/mountain/.test(n)) return 'mountain-climber';
+  if (/sit-to-stand|sit to stand|chair stand|desk chair/.test(n)) return 'bodyweight-squat';
+  if (/side bend/.test(n)) return 'dumbbell-side-bend';
+  if (/neck|chin tuck|shoulder car|hip circle/.test(n)) return 'arm-circles';
+
+  return 'bodyweight-squat';
 }
 function wgFrameUrl(slug, frame) {
   return `${WG_CDN}/${slug}/frame-${frame}.png`;
 }
 
-function prVideoUrl(name) {
-  const k = photoKey(name);
-  // Photoreal motion loops when available
-  const has = { squat:1, plank:1, lunge:1, pushup:1 };
-  if (!has[k]) return null;
-  return '/assets/videos/' + k + '.mp4?v=32';
-}
-function prDemoHtml(name) {
-  const vid = prVideoUrl(name);
-  const poster = photoUrl(name);
-  if (!vid) return null;
-  return `<div class="pr-demo">
-    <div class="pr-stage">
-      <video class="pr-video" src="${vid}" poster="${poster}" autoplay muted loop playsinline webkit-playsinline preload="auto"></video>
-    </div>
-    <p class="wg-credit">Photoreal form demo</p>
-  </div>`;
-}
+function prVideoUrl(name) { return null; }
+function prDemoHtml(name) { return null; }
 
 function wgDemoHtml(name, opts = {}) {
   const slug = wgSlug(name);
@@ -238,7 +257,7 @@ function wgDemoHtml(name, opts = {}) {
       <div class="wg-glow"></div>
     </div>
     <div class="wg-strip" aria-hidden="true">${strip}</div>
-    <p class="wg-credit">Form guide · Workout Guide · CC BY-SA</p>
+    <p class="wg-credit">Animated form · Setup → Move → Finish</p>
   </div>`;
 }
 
@@ -894,9 +913,9 @@ function renderWorkoutRun() {
   if (phase === 'done') {
     stageMedia = '<div class="ex-done-mark">✓</div>';
   } else if (phase === 'work' || phase === 'ready') {
-    stageMedia = prDemoHtml(mediaName) || wgDemoHtml(mediaName);
+    stageMedia = wgDemoHtml(ex?.name || mediaName);
   } else {
-    stageMedia = `<img class="photo-stage" src="${photoUrl(mediaName)}" alt="" />`;
+    stageMedia = wgDemoHtml(mediaName);
   }
   const pct = ((exerciseIndex + (phase === 'rest' ? 0.5 : phase === 'done' ? 1 : 0)) / total) * 100;
   return `<div class="screen center workout-focus fade-in phase-${phase}">
