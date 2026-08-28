@@ -1,4 +1,4 @@
-const CACHE = 'vyrn-v32';
+const CACHE = 'vyrn-v33';
 const ASSETS = ['/', '/index.html', '/app.js', '/site.js', '/manifest.json', '/assets/logo.png'];
 
 self.addEventListener('install', (e) => {
@@ -17,13 +17,35 @@ self.addEventListener('fetch', (e) => {
   if (e.request.method !== 'GET') return;
   const url = new URL(e.request.url);
 
-  // External CDNs (Workout Guide, etc.) — network only, never HTML fallback
+  // External CDNs — network only
   if (url.origin !== self.location.origin) {
     e.respondWith(fetch(e.request));
     return;
   }
 
-  // Media — direct network
+  // App shell / JS — network-first so updates land quickly
+  if (
+    url.pathname === '/' ||
+    url.pathname === '/index.html' ||
+    url.pathname === '/app.js' ||
+    url.pathname === '/site.js' ||
+    url.pathname === '/sw.js'
+  ) {
+    e.respondWith(
+      fetch(e.request)
+        .then((res) => {
+          if (res && res.status === 200) {
+            const copy = res.clone();
+            caches.open(CACHE).then((c) => c.put(e.request, copy));
+          }
+          return res;
+        })
+        .catch(() => caches.match(e.request).then((c) => c || caches.match('/index.html')))
+    );
+    return;
+  }
+
+  // Media — cache-first
   if (url.pathname.match(/\.(mp4|webm|mov|mp3|wav|glb|gltf|png|jpg|jpeg|svg|webp)(\?|$)/i)) {
     e.respondWith(
       caches.match(e.request).then((c) => c || fetch(e.request).then((res) => {
