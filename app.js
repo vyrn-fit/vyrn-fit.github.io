@@ -724,9 +724,6 @@ function render() {
     v.addEventListener('loadeddata', tryPlay, { once: true });
     tryPlay();
   });
-  // Mount 3D form demo when present
-  }
-
 }
 
 function renderLegalFooter() {
