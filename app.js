@@ -16,6 +16,9 @@ let voiceEnabled = true;
 let sfxEnabled = true;
 let musicHintDismissed = false;
 let audioCtx = null;
+let trainerGender = 'female';
+let _voicesReady = false;
+let _lastCoachFive = false;
 
 const store = {
   get(key) {
@@ -545,7 +548,6 @@ function sfxDone() { beep(523, 0.1); setTimeout(() => beep(659, 0.1), 100); setT
 function sfxTick() { beep(1200, 0.04, 'square', 0.04); }
 
 function speakForTts(text) {
-  // Normalize so Speech Synthesis does not spell acronyms/hyphens oddly
   let s = String(text || '');
   const replacements = [
     [/push-?ups?/gi, 'push ups'],
@@ -562,13 +564,14 @@ function speakForTts(text) {
     [/calf raises?/gi, 'calf raises'],
     [/hip circles?/gi, 'hip circles'],
     [/step-?ups?/gi, 'step ups'],
+    [/sit-?to-?stand/gi, 'sit to stand'],
     [/cool-?down/gi, 'cool down'],
     [/wake-?up/gi, 'wake up'],
     [/HIIT/g, 'hit'],
     [/\bL\b/g, 'left'],
     [/\bR\b/g, 'right'],
     [/\(knee OK\)/gi, 'knees okay'],
-    [/\(or [^)]+\)/gi, ''],  // drop parenthetical alternatives for cleaner speech
+    [/\(or [^)]+\)/gi, ''],
     [/-/g, ' '],
     [/\s+/g, ' ']
   ];
@@ -576,16 +579,140 @@ function speakForTts(text) {
   return s.trim();
 }
 
-function speak(text) {
+function inferReps(name) {
+  const n = (name || '').toLowerCase();
+  if (!n) return null;
+  if (/plank|wall sit|hold|hang|hollow|stretch|roll|opener|breath|walk|jog|march|run|sprint|cool-?down|circle|cars|chin tuck|side bend|hip flexor|thoracic|cat-?cow|neck|shoulder car|ankle|fold|toe reach|chest opener|breathing/.test(n)) return null;
+  if (/burpee/.test(n)) return 8;
+  if (/diamond|narrow push|pike push|incline push|wall push|push-?up/.test(n)) return 12;
+  if (/sit-?to-?stand|chair stand|bench sit/.test(n)) return 15;
+  if (/jump squat|squat jump|squat pulse|sumo|air squat|bodyweight squat|\bsquats?\b/.test(n)) return 15;
+  if (/lunge/.test(n)) return 12;
+  if (/mountain climber|jumping jack|step-?jack|high knee|broad jump/.test(n)) return 20;
+  if (/bridge|dead bug|bird dog|superman|dip|calf|step-?up/.test(n)) return 12;
+  if (/twist|squeeze|pulse|shoulder tap|russian/.test(n)) return 16;
+  return null;
+}
+
+function exerciseMeta(ex) {
+  if (!ex) return { name: '', duration: 0, rest: 0, reps: null, mode: 'time' };
+  const reps = (ex.reps != null && ex.reps > 0) ? ex.reps : inferReps(ex.name);
+  return { name: ex.name, duration: ex.duration || 0, rest: ex.rest || 0, reps, mode: reps ? 'reps' : 'time' };
+}
+
+function metaLabel(ex) {
+  const m = exerciseMeta(ex);
+  if (m.reps && m.duration) return m.reps + ' reps · ' + m.duration + 's';
+  if (m.reps) return m.reps + ' reps';
+  return m.duration + 's';
+}
+
+function pickCoachVoice() {
+  if (!window.speechSynthesis) return null;
+  const voices = window.speechSynthesis.getVoices() || [];
+  if (!voices.length) return null;
+  const gender = trainerGender === 'male' ? 'male' : 'female';
+  const scored = voices.map((v) => {
+    const name = (v.name || '') + ' ' + (v.lang || '');
+    let score = 0;
+    if (/en(-|_)?(us|gb|au|nz|ie)/i.test(v.lang || '')) score += 5;
+    if (gender === 'female') {
+      if (/female|woman|samantha|karen|moira|susan|zira|victoria|fiona|tessa|google.*female|microsoft.*(zira|susan)/i.test(name)) score += 10;
+      if (/male|david|daniel|alex|fred|mark|google.*male/i.test(name) && !/female/i.test(name)) score -= 8;
+    } else {
+      if (/male|man|david|daniel|alex|fred|mark|ravi|google.*male|microsoft.*(david|mark|guy)/i.test(name) && !/female/i.test(name)) score += 10;
+      if (/female|samantha|karen|zira|susan/i.test(name)) score -= 8;
+    }
+    if (/premium|enhanced|neural|natural/i.test(name)) score += 2;
+    return { v, score };
+  });
+  scored.sort((a, b) => b.score - a.score);
+  return scored[0] && scored[0].score > 0 ? scored[0].v : (voices.find(v => /^en/i.test(v.lang || '')) || voices[0]);
+}
+
+function speak(text, opts) {
+  opts = opts || {};
   if (!voiceEnabled || !window.speechSynthesis) return;
   try {
     window.speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(speakForTts(text));
-    u.rate = 1.0;
-    u.pitch = 1;
-    u.volume = 0.9;
+    const voice = pickCoachVoice();
+    if (voice) u.voice = voice;
+    const energetic = opts.energy !== false;
+    if (trainerGender === 'male') {
+      u.rate = energetic ? 1.12 : 1.05;
+      u.pitch = energetic ? 0.95 : 1.0;
+    } else {
+      u.rate = energetic ? 1.14 : 1.06;
+      u.pitch = energetic ? 1.12 : 1.05;
+    }
+    u.volume = 1;
     window.speechSynthesis.speak(u);
   } catch (_) {}
+}
+
+const COACH_LINES = {
+  workReps: [
+    function(n, r) { return "Let's go! " + r + " " + n + ". You've got this!"; },
+    function(n, r) { return "Come on — " + r + " solid " + n + ". Make every rep count!"; },
+    function(n, r) { return "Time to work! " + r + " " + n + ". Push it!"; },
+    function(n, r) { return "Here we go! " + r + " " + n + ". Stay strong!"; }
+  ],
+  workTime: [
+    function(n) { return "Let's go! " + n + ". Stay locked in!"; },
+    function(n) { return "Work time — " + n + ". You've got this!"; },
+    function(n) { return "Come on! " + n + ". Give it everything!"; },
+    function(n) { return "Here we go — " + n + ". Own it!"; }
+  ],
+  rest: [
+    function() { return "Yes! Rest up. Breathe. You're crushing it."; },
+    function() { return "Nice work! Shake it out. Recover strong."; },
+    function() { return "Great set! Catch your breath — next one's coming."; },
+    function() { return "Beautiful! Rest. Stay loose. You're doing amazing."; }
+  ],
+  ready: [
+    function(n) { return "Get ready. " + n + ". Let's make it count!"; },
+    function(n) { return "Next up — " + n + ". Bring the energy!"; }
+  ],
+  five: [
+    function() { return "Five seconds — finish strong!"; },
+    function() { return "Almost there — dig deep!"; },
+    function() { return "Final five — don't quit now!"; }
+  ],
+  done: [
+    function() { return "Session complete! Outstanding work. Be proud of that."; },
+    function() { return "That's a wrap! You showed up and put in the work. Amazing."; },
+    function() { return "Done! Incredible effort. See you next session."; }
+  ]
+};
+
+function coachLine(bucket) {
+  var args = Array.prototype.slice.call(arguments, 1);
+  var arr = COACH_LINES[bucket] || [];
+  if (!arr.length) return '';
+  var fn = arr[Math.floor(Math.random() * arr.length)];
+  return fn.apply(null, args);
+}
+
+function speakExerciseStart(ex) {
+  var m = exerciseMeta(ex);
+  var n = speakForTts(m.name);
+  if (m.reps) speak(coachLine('workReps', n, m.reps));
+  else speak(coachLine('workTime', n));
+}
+
+function speakRest() { speak(coachLine('rest')); }
+function speakDone() { speak(coachLine('done')); }
+function speakReady(ex) {
+  var n = speakForTts((ex && ex.name) || 'your first move');
+  speak(coachLine('ready', n));
+}
+
+function warmVoices() {
+  if (!window.speechSynthesis) return;
+  var kick = function() { _voicesReady = true; window.speechSynthesis.getVoices(); };
+  kick();
+  window.speechSynthesis.onvoiceschanged = kick;
 }
 
 function renderMusicBar(compact) {
@@ -675,6 +802,8 @@ async function init() {
   voiceEnabled = store.get('voiceEnabled') !== false;
   sfxEnabled = store.get('sfxEnabled') !== false;
   musicHintDismissed = !!store.get('musicHintDismissed');
+  trainerGender = store.get('trainerGender') === 'male' ? 'male' : 'female';
+  warmVoices();
 
   if (window.supabase) {
     supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -890,7 +1019,7 @@ function renderWorkoutDetail() {
         <div class="ex-item">
           ${iconFor(e.name)}
           <span class="ex-item-text"><strong>${i + 1}. ${e.name}</strong><span class="muted form-line">${formGuideFor(e.name).focus}</span></span>
-          <span class="muted">${e.duration}s</span>
+          <span class="muted">${metaLabel(e)}</span>
         </div>
       `).join('')}
     </div>
@@ -907,15 +1036,16 @@ function renderWorkoutRun() {
   if (!w) return renderHome();
   const ex = w.exercises[exerciseIndex];
   const total = w.exercises.length;
+  const meta = exerciseMeta(ex);
   const label = phase === 'work' ? (ex?.name || '') : phase === 'rest' ? 'Rest' : phase === 'done' ? 'Session complete' : 'Get ready';
   const mediaName = ex?.name || w.title;
   let stageMedia;
   if (phase === 'done') {
     stageMedia = '<div class="ex-done-mark">✓</div>';
   } else if (phase === 'rest') {
-    // Rest is NOT an exercise — show calm rest card, never form guides
     const next = w.exercises[exerciseIndex + 1];
-    const nextHint = next ? `<p class="rest-next">Up next · ${next.name}</p>` : '';
+    const nr = next ? inferReps(next.name) : null;
+    const nextHint = next ? `<p class="rest-next">Up next · ${next.name}${nr ? ' · ' + nr + ' reps' : ''}</p>` : '';
     stageMedia = `<div class="rest-card" role="img" aria-label="Rest">
       <div class="rest-icon">◉</div>
       <p class="rest-title">Rest</p>
@@ -923,10 +1053,14 @@ function renderWorkoutRun() {
       ${nextHint}
     </div>`;
   } else {
-    // work + ready → animated form guide for the current exercise
     stageMedia = wgDemoHtml(ex?.name || mediaName);
   }
   const pct = ((exerciseIndex + (phase === 'rest' ? 0.5 : phase === 'done' ? 1 : 0)) / total) * 100;
+  const targetChip = (phase === 'work' || phase === 'ready')
+    ? (meta.reps
+        ? `<div class="target-chip"><span class="target-reps">${meta.reps} reps</span><span class="target-sep">·</span><span class="target-time">${meta.duration}s cap</span></div>`
+        : `<div class="target-chip"><span class="target-time">Hold · ${meta.duration}s</span></div>`)
+    : '';
   return `<div class="screen center workout-focus fade-in phase-${phase}">
     <p class="muted">${w.title} · ${Math.min(exerciseIndex + 1, total)}/${total}</p>
     <div class="ex-stage ${phase}">
@@ -934,6 +1068,7 @@ function renderWorkoutRun() {
     </div>
     <div class="timer-display big${phaseSeconds <= 5 && phase !== 'ready' && phase !== 'done' ? ' urgent' : ''}" id="phase-timer">${formatTime(phaseSeconds)}</div>
     <h2 id="phase-label">${label}</h2>
+    ${targetChip}
     ${
       phase === 'ready' || phase === 'work'
         ? formStepsHtml(ex?.name || mediaName)
@@ -1062,8 +1197,20 @@ function renderProfile() {
         : `<button class="btn ghost" data-action="downgrade">Manage (demo: switch to Free)</button>`}
     </div>
     <div class="card">
-      <h3>Audio</h3>
-      <div class="toggle-row">
+      <h3>Coach</h3>
+      <p class="muted mb" style="font-size:13px">Pick your trainer. Cues stay loud, clear, and fired up.</p>
+      <div class="trainer-pick">
+        <button type="button" class="trainer-btn ${trainerGender==='female'?'active':''}" data-action="set-trainer" data-gender="female">
+          <span class="trainer-emoji">♀</span>
+          <span>Female</span>
+        </button>
+        <button type="button" class="trainer-btn ${trainerGender==='male'?'active':''}" data-action="set-trainer" data-gender="male">
+          <span class="trainer-emoji">♂</span>
+          <span>Male</span>
+        </button>
+      </div>
+      <button type="button" class="btn secondary mt" data-action="preview-coach" style="width:100%">Preview coach voice</button>
+      <div class="toggle-row mt">
         <span>Voice coaching</span>
         <button class="toggle ${voiceEnabled?'on':''}" data-action="toggle-voice">${voiceEnabled?'On':'Off'}</button>
       </div>
@@ -1071,7 +1218,7 @@ function renderProfile() {
         <span>Sound effects</span>
         <button class="toggle ${sfxEnabled?'on':''}" data-action="toggle-sfx">${sfxEnabled?'On':'Off'}</button>
       </div>
-      <p class="muted" style="margin-top:12px;font-size:13px">Music: use Spotify or Apple Music in the background. Deep in-app integrate comes next.</p>
+      <p class="muted" style="margin-top:12px;font-size:13px">Music: use Spotify or Apple Music in the background.</p>
       <div class="music-actions" style="margin-top:10px">
         <a class="btn secondary music-link" href="https://open.spotify.com/search/workout%20focus" target="_blank" rel="noopener">Spotify</a>
         <a class="btn secondary music-link" href="https://music.apple.com/search?term=workout" target="_blank" rel="noopener">Apple Music</a>
@@ -1099,6 +1246,7 @@ function bindEvents() {
 
 function startPhaseTimer() {
   clearInterval(tickTimer);
+  _lastCoachFive = false;
   tickTimer = setInterval(() => {
     phaseSeconds--;
     totalSeconds++;
@@ -1107,6 +1255,10 @@ function startPhaseTimer() {
       el.textContent = formatTime(Math.max(0, phaseSeconds));
       if (phaseSeconds <= 5 && phase !== 'ready' && phase !== 'done') el.classList.add('urgent');
       else el.classList.remove('urgent');
+    }
+    if (phase === 'work' && phaseSeconds === 5 && !_lastCoachFive) {
+      _lastCoachFive = true;
+      speak(coachLine('five'));
     }
     if (phaseSeconds === 3 || phaseSeconds === 2 || phaseSeconds === 1) sfxTick();
     if (phaseSeconds <= 0) advancePhase();
@@ -1124,7 +1276,7 @@ function advancePhase() {
       phase = 'rest';
       phaseSeconds = rest;
       sfxRest();
-      speak('Rest');
+      speakRest();
       render();
       startPhaseTimer();
       return;
@@ -1136,14 +1288,14 @@ function advancePhase() {
     if (exerciseIndex >= w.exercises.length) {
       phase = 'done';
       sfxDone();
-      speak('Session complete. Great work.');
+      speakDone();
       render();
       return;
     }
     phase = 'work';
     phaseSeconds = w.exercises[exerciseIndex].duration;
     sfxStart();
-    speak(w.exercises[exerciseIndex].name);
+    speakExerciseStart(w.exercises[exerciseIndex]);
     render();
     startPhaseTimer();
   }
@@ -1239,10 +1391,26 @@ async function handleAction(action) {
     render();
     return;
   }
+  if (action === 'set-trainer') {
+    const g = el.dataset.gender === 'male' ? 'male' : 'female';
+    trainerGender = g;
+    store.set('trainerGender', g);
+    warmVoices();
+    speak(g === 'male'
+      ? "Male coach locked in. Let's get after it!"
+      : "Female coach locked in. Let's get after it!");
+    render();
+    return;
+  }
+  if (action === 'preview-coach') {
+    warmVoices();
+    speak("Let's go! Twelve push ups. You've got this! Stay strong!");
+    return;
+  }
   if (action === 'toggle-voice') {
     voiceEnabled = !voiceEnabled;
     store.set('voiceEnabled', voiceEnabled);
-    if (voiceEnabled) speak('Voice on');
+    if (voiceEnabled) speak("Voice on. Let's train!");
     render();
     return;
   }
@@ -1265,6 +1433,7 @@ async function handleAction(action) {
     phaseSeconds = w.exercises[0].duration;
     totalSeconds = 0;
     navigate('workoutRun');
+    setTimeout(() => speakReady(w.exercises[0]), 280);
     return;
   }
 
@@ -1274,9 +1443,9 @@ async function handleAction(action) {
     phaseSeconds = activeWorkout.exercises[0].duration;
     totalSeconds = 0;
     sfxStart();
-    speak(activeWorkout.exercises[0].name);
-    render();
+    speakExerciseStart(activeWorkout.exercises[0]);
     startPhaseTimer();
+    render();
     return;
   }
 
@@ -1303,7 +1472,11 @@ async function handleAction(action) {
       duration: totalSeconds,
       date: todayKey(),
       at: Date.now(),
-      exercises: w.exercises.map(e => e.name)
+      exercises: w.exercises.map(e => {
+        const m = exerciseMeta(e);
+        return { name: m.name, duration: m.duration, reps: m.reps };
+      }),
+      totalReps: w.exercises.reduce((sum, e) => sum + (exerciseMeta(e).reps || 0), 0)
     };
     await saveWorkoutSession(session);
     const prev = getHistory().filter(h => h.workoutId === w.id && h.at < session.at).pop();
