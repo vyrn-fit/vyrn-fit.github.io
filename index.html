@@ -1330,6 +1330,61 @@
       letter-spacing: -0.01em;
       text-align: center;
     }
+
+    /* Calm rest card — not an exercise form */
+    .rest-card {
+      width: min(280px, 86vw);
+      margin: 0 auto;
+      padding: 28px 20px 22px;
+      border-radius: 24px;
+      background: linear-gradient(160deg, #0f172a 0%, #111827 55%, #0b1220 100%);
+      border: 1px solid #3b82f644;
+      box-shadow: 0 0 40px rgba(59, 130, 246, 0.12);
+      text-align: center;
+    }
+    .rest-icon {
+      width: 56px; height: 56px; margin: 0 auto 14px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px; color: #93c5fd;
+      background: radial-gradient(circle at 40% 35%, #1e3a5f, #0f172a);
+      border: 1px solid #3b82f655;
+      animation: restPulse 2.4s ease-in-out infinite;
+    }
+    @keyframes restPulse {
+      0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(59,130,246,0.25); }
+      50% { transform: scale(1.06); box-shadow: 0 0 0 10px rgba(59,130,246,0); }
+    }
+    .rest-title {
+      margin: 0 0 6px;
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      color: #e0f2fe;
+    }
+    .rest-sub {
+      margin: 0;
+      font-size: 13px;
+      color: #94a3b8;
+      font-weight: 500;
+    }
+    .rest-next {
+      margin: 14px 0 0;
+      padding-top: 12px;
+      border-top: 1px solid #1e293b;
+      font-size: 12px;
+      color: #64748b;
+      font-weight: 600;
+    }
+    .ex-stage.rest {
+      width: auto !important;
+      height: auto !important;
+      background: transparent;
+      border: none;
+      box-shadow: none;
+      padding: 0;
+    }
+
     .form-focus.rest-cue {
       background: none;
       border: none;
