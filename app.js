@@ -19,6 +19,8 @@ let audioCtx = null;
 let trainerGender = 'female';
 let _voicesReady = false;
 let _lastCoachFive = false;
+let socialCache = { challenges: [], mine: [], activity: [], board: [], activeChallenge: null, loading: false };
+let pendingJoinCode = null;
 
 const store = {
   get(key) {
@@ -771,20 +773,248 @@ async function saveWorkoutSession(session) {
     if (diff <= 1.5) streak++; else break;
   }
   store.set('streak', streak);
+
+  // Always try cloud session write for signed-in users (Phase B)
   if (supabaseClient && currentUser && !currentUser.isGuest) {
     try {
-      await supabaseClient.from('workouts').insert({
+      const row = {
         user_id: currentUser.id,
         title: session.title,
+        workout_id: session.workoutId || null,
         duration_seconds: session.duration,
+        total_reps: session.totalReps || 0,
         exercises: session.exercises || [],
         completed_at: new Date().toISOString()
+      };
+      const { error } = await supabaseClient.from('workouts').insert(row);
+      if (error) throw error;
+      await postActivity('session_complete', {
+        title: session.title,
+        duration: session.duration,
+        totalReps: session.totalReps || 0,
+        workoutId: session.workoutId || null
       });
     } catch (e) {
-      console.warn('Cloud save skipped', e.message);
+      console.warn('Cloud save skipped', e.message || e);
     }
   }
 }
+
+function displayName() {
+  if (!currentUser) return 'Athlete';
+  if (currentUser.user_metadata?.full_name) return currentUser.user_metadata.full_name;
+  if (currentUser.email) return currentUser.email.split('@')[0];
+  return 'Athlete';
+}
+
+function isSignedIn() {
+  return !!(currentUser && !currentUser.isGuest && supabaseClient);
+}
+
+function inviteLink(code) {
+  return location.origin + '/?app=1&join=' + encodeURIComponent(code);
+}
+
+function genLocalCode() {
+  return Math.random().toString(36).slice(2, 10).toUpperCase();
+}
+
+async function postActivity(kind, payload) {
+  if (!isSignedIn()) return;
+  try {
+    await supabaseClient.from('activity').insert({
+      user_id: currentUser.id,
+      kind,
+      payload: payload || {}
+    });
+  } catch (e) {
+    console.warn('activity', e.message || e);
+  }
+}
+
+async function ensureProfile() {
+  if (!isSignedIn()) return;
+  try {
+    const { data } = await supabaseClient.from('profiles').select('id').eq('id', currentUser.id).maybeSingle();
+    if (!data) {
+      await supabaseClient.from('profiles').insert({
+        id: currentUser.id,
+        full_name: displayName(),
+        display_name: displayName()
+      });
+    }
+  } catch (e) {
+    console.warn('profile', e.message || e);
+  }
+}
+
+async function refreshSocial() {
+  if (!supabaseClient) return;
+  socialCache.loading = true;
+  try {
+    const { data: challenges } = await supabaseClient
+      .from('challenges')
+      .select('*')
+      .eq('is_active', true)
+      .order('created_at', { ascending: false })
+      .limit(30);
+    socialCache.challenges = challenges || [];
+
+    const { data: activity } = await supabaseClient
+      .from('activity')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(25);
+    socialCache.activity = activity || [];
+
+    if (isSignedIn()) {
+      const { data: memberships } = await supabaseClient
+        .from('challenge_members')
+        .select('challenge_id')
+        .eq('user_id', currentUser.id);
+      const ids = (memberships || []).map(m => m.challenge_id);
+      socialCache.mine = (socialCache.challenges || []).filter(c => ids.includes(c.id) || c.creator_id === currentUser.id);
+    } else {
+      socialCache.mine = [];
+    }
+  } catch (e) {
+    console.warn('refreshSocial', e.message || e);
+  }
+  socialCache.loading = false;
+}
+
+async function loadLeaderboard(challengeId) {
+  if (!supabaseClient || !challengeId) { socialCache.board = []; return; }
+  try {
+    const { data } = await supabaseClient
+      .from('challenge_entries')
+      .select('id, user_id, score_seconds, completed_at, notes')
+      .eq('challenge_id', challengeId)
+      .order('score_seconds', { ascending: true })
+      .limit(50);
+    const rows = data || [];
+    // attach names from profiles
+    const uids = [...new Set(rows.map(r => r.user_id))];
+    let names = {};
+    if (uids.length) {
+      const { data: profiles } = await supabaseClient
+        .from('profiles')
+        .select('id, display_name, full_name, username')
+        .in('id', uids);
+      (profiles || []).forEach(p => {
+        names[p.id] = p.display_name || p.full_name || p.username || 'Athlete';
+      });
+    }
+    socialCache.board = rows.map((r, i) => ({
+      ...r,
+      rank: i + 1,
+      name: names[r.user_id] || (r.user_id === currentUser?.id ? displayName() : 'Athlete')
+    }));
+  } catch (e) {
+    console.warn('board', e.message || e);
+    socialCache.board = [];
+  }
+}
+
+async function createFriendsChallenge({ title, description, workoutId, days }) {
+  if (!isSignedIn()) throw new Error('Sign in to create a challenge');
+  await ensureProfile();
+  const code = genLocalCode();
+  const start = new Date();
+  const end = new Date(Date.now() + (days || 7) * 86400000);
+  const w = workoutId && WORKOUTS[workoutId];
+  const exercise_list = w
+    ? w.exercises.map(e => {
+        const m = exerciseMeta(e);
+        return m.reps
+          ? { name: m.name, reps: m.reps }
+          : { name: m.name, duration_seconds: m.duration };
+      })
+    : [
+        { name: 'Bodyweight squats', reps: 20 },
+        { name: 'Push-ups', reps: 15 },
+        { name: 'Reverse lunges', reps: 16 },
+        { name: 'Plank', duration_seconds: 40 }
+      ];
+  const row = {
+    title: title || ((w && w.title) ? w.title + ' Challenge' : 'Friends Challenge'),
+    description: description || 'Friends-only. Best time ranks higher. Honor system.',
+    start_date: start.toISOString(),
+    end_date: end.toISOString(),
+    exercise_list,
+    is_active: true,
+    creator_id: currentUser.id,
+    invite_code: code,
+    kind: 'friends',
+    workout_id: workoutId || null,
+    goal: 'best_time'
+  };
+  const { data, error } = await supabaseClient.from('challenges').insert(row).select().single();
+  if (error) throw error;
+  await supabaseClient.from('challenge_members').insert({
+    challenge_id: data.id,
+    user_id: currentUser.id
+  });
+  await postActivity('challenge_create', { challengeId: data.id, title: data.title, code: data.invite_code });
+  return data;
+}
+
+async function joinChallengeByCode(code) {
+  if (!isSignedIn()) throw new Error('Sign in to join a challenge');
+  await ensureProfile();
+  const clean = String(code || '').trim().toUpperCase();
+  if (!clean) throw new Error('Enter an invite code');
+  const { data: ch, error } = await supabaseClient
+    .from('challenges')
+    .select('*')
+    .eq('invite_code', clean)
+    .maybeSingle();
+  if (error) throw error;
+  if (!ch) throw new Error('Challenge not found');
+  const { error: mErr } = await supabaseClient.from('challenge_members').upsert({
+    challenge_id: ch.id,
+    user_id: currentUser.id
+  }, { onConflict: 'challenge_id,user_id' });
+  if (mErr) throw mErr;
+  await postActivity('challenge_join', { challengeId: ch.id, title: ch.title, code: clean });
+  return ch;
+}
+
+async function submitChallengeTime(challengeId, scoreSeconds, notes) {
+  if (!isSignedIn()) throw new Error('Sign in required');
+  const { error } = await supabaseClient.from('challenge_entries').upsert({
+    challenge_id: challengeId,
+    user_id: currentUser.id,
+    score_seconds: scoreSeconds,
+    notes: notes || null,
+    completed_at: new Date().toISOString()
+  }, { onConflict: 'challenge_id,user_id' });
+  if (error) throw error;
+  await postActivity('challenge_result', {
+    challengeId,
+    scoreSeconds,
+    title: socialCache.activeChallenge?.title || 'Challenge'
+  });
+}
+
+function formatActivity(a) {
+  const p = a.payload || {};
+  const when = new Date(a.created_at).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+  if (a.kind === 'session_complete') {
+    return { icon: '✓', text: `Finished ${p.title || 'a workout'} · ${formatTime(p.duration || 0)}`, when };
+  }
+  if (a.kind === 'challenge_join') {
+    return { icon: '+', text: `Joined ${p.title || 'a challenge'}`, when };
+  }
+  if (a.kind === 'challenge_create') {
+    return { icon: '⚡', text: `Created ${p.title || 'a challenge'}`, when };
+  }
+  if (a.kind === 'challenge_result') {
+    return { icon: '🏆', text: `Posted ${formatTime(p.scoreSeconds || 0)} on ${p.title || 'challenge'}`, when };
+  }
+  return { icon: '•', text: a.kind, when };
+}
+
 
 function isAppMode() {
   return (
@@ -827,20 +1057,48 @@ async function init() {
     currentUser = { id: g.id || 'guest', email: g.email || 'guest@vyrn.app', isGuest: true };
   }
   // OAuth return hash
+  // Deep link: ?join=CODE
+  const params = new URLSearchParams(location.search);
+  const join = params.get('join');
+  if (join) pendingJoinCode = join.trim().toUpperCase();
+
   if (window.location.hash.includes('access_token') || window.location.search.includes('code=')) {
     currentScreen = 'home';
+  }
+  if (currentUser && !currentUser.isGuest) {
+    currentScreen = currentScreen === 'welcome' ? 'home' : currentScreen;
+    ensureProfile().then(() => refreshSocial());
+    if (pendingJoinCode) {
+      currentScreen = 'challenge';
+    }
   }
   render();
 }
 
 function navigate(screen) {
-  if (tickTimer && screen !== 'workoutRun') {
+  if (tickTimer && screen !== 'workoutRun' && screen !== 'challengeRun') {
     clearInterval(tickTimer);
     tickTimer = null;
   }
   currentScreen = screen;
   render();
   window.scrollTo(0, 0);
+  if (screen === 'challenge' || screen === 'home') {
+    refreshSocial().then(() => {
+      if (currentScreen === screen) render();
+      if (pendingJoinCode && isSignedIn() && screen === 'challenge') {
+        const code = pendingJoinCode;
+        pendingJoinCode = null;
+        joinChallengeByCode(code).then(ch => {
+          socialCache.activeChallenge = ch;
+          loadLeaderboard(ch.id).then(() => {
+            alert('Joined: ' + ch.title);
+            refreshSocial().then(() => render());
+          });
+        }).catch(e => alert(e.message || 'Could not join'));
+      }
+    });
+  }
 }
 
 function render() {
@@ -850,8 +1108,8 @@ function render() {
   const map = {
     welcome: renderWelcome, login: renderLogin, home: renderHome,
     library: renderLibrary, workoutDetail: renderWorkoutDetail, workoutRun: renderWorkoutRun,
-    history: renderHistory, challenge: renderChallenge, challengeRun: renderChallengeRun,
-    profile: renderProfile
+    history: renderHistory, challenge: renderChallenge, challengeDetail: renderChallengeDetail,
+    challengeRun: renderChallengeRun, profile: renderProfile
   };
   app.innerHTML = (map[currentScreen] || renderWelcome)();
   bindEvents();
@@ -889,6 +1147,7 @@ function renderTabBar(active) {
   return `<nav class="tabbar">
     <button class="tab ${active==='home'?'active':''}" data-go="home">Home</button>
     <button class="tab ${active==='library'?'active':''}" data-go="library">Workouts</button>
+    <button class="tab ${active==='challenge'?'active':''}" data-go="challenge">Community</button>
     <button class="tab ${active==='history'?'active':''}" data-go="history">History</button>
     <button class="tab ${active==='profile'?'active':''}" data-go="profile">Profile</button>
   </nav>`;
@@ -1130,51 +1389,149 @@ function renderHistory() {
 }
 
 function renderChallenge() {
-  const entries = store.get('entries') || [];
-  const sorted = [...entries].sort((a, b) => a.score_seconds - b.score_seconds).slice(0, 10);
+  const signed = isSignedIn();
+  const list = socialCache.challenges || [];
+  const mine = socialCache.mine || [];
+  const activity = (socialCache.activity || []).slice(0, 8);
+  const freeWorkouts = Object.values(WORKOUTS).filter(w => w.free).slice(0, 8);
+
+  return `<div class="screen fade-in">
+    <div class="topbar"><h2>Community</h2></div>
+    <p class="muted mb">Friends challenges · share a code · climb the board. Honor system.</p>
+
+    ${!signed ? `<div class="card highlight mb">
+      <p><strong>Sign in to create or join</strong></p>
+      <p class="muted">Cloud challenges need an account (email or Google).</p>
+      <button class="btn primary" data-go="login">Sign in</button>
+    </div>` : ''}
+
+    ${pendingJoinCode ? `<div class="card highlight mb">
+      <p>Invite code waiting: <strong>${pendingJoinCode}</strong></p>
+      ${signed
+        ? `<button class="btn primary" data-action="join-pending">Join now</button>`
+        : `<button class="btn primary" data-go="login">Sign in to join</button>`}
+    </div>` : ''}
+
+    <div class="card mb">
+      <h3>Join with code</h3>
+      <div class="join-row">
+        <input id="join-code" class="input" placeholder="e.g. 1B498EF4" maxlength="12" value="" />
+        <button class="btn primary" data-action="join-code" ${signed?'':'disabled'}>Join</button>
+      </div>
+    </div>
+
+    <div class="card mb">
+      <h3>Create friends challenge</h3>
+      <p class="muted mb" style="font-size:13px">Pick a workout, get a share link, invite friends.</p>
+      <label class="muted" style="font-size:12px">Workout</label>
+      <select id="create-workout" class="input mb">
+        ${freeWorkouts.map(w => `<option value="${w.id}">${w.title} · ${w.durationLabel}</option>`).join('')}
+      </select>
+      <label class="muted" style="font-size:12px">Days open</label>
+      <select id="create-days" class="input mb">
+        <option value="3">3 days</option>
+        <option value="7" selected>7 days</option>
+        <option value="14">14 days</option>
+      </select>
+      <button class="btn primary" data-action="create-challenge" ${signed?'':'disabled'} style="width:100%">Create & get link</button>
+    </div>
+
+    ${mine.length ? `<h3 class="mb">Your challenges</h3>
+      <div class="list mb">${mine.map(c => `
+        <button class="list-row" data-action="open-challenge" data-id="${c.id}">
+          <span class="list-text">
+            <strong>${c.title}</strong>
+            <span class="muted">${c.kind || 'public'} · code ${c.invite_code || '—'}</span>
+          </span>
+          <span class="chev">›</span>
+        </button>`).join('')}
+      </div>` : ''}
+
+    <h3 class="mb">Open challenges</h3>
+    <div class="list mb">
+      ${list.length ? list.map(c => `
+        <button class="list-row" data-action="open-challenge" data-id="${c.id}">
+          <span class="list-text">
+            <strong>${c.title}</strong>
+            <span class="muted">${c.kind || 'public'} · ends ${new Date(c.end_date).toLocaleDateString()}</span>
+          </span>
+          <span class="chev">›</span>
+        </button>`).join('') : '<p class="muted">No active challenges yet — create one.</p>'}
+    </div>
+
+    <h3 class="mb">Activity</h3>
+    <div class="activity-feed mb">
+      ${activity.length ? activity.map(a => {
+        const f = formatActivity(a);
+        return `<div class="activity-row"><span class="activity-icon">${f.icon}</span><div><p>${f.text}</p><p class="muted" style="font-size:11px">${f.when}</p></div></div>`;
+      }).join('') : '<p class="muted">Finish a workout or join a challenge to see activity.</p>'}
+    </div>
+    ${renderTabBar('challenge')}
+  </div>`;
+}
+
+function renderChallengeDetail() {
+  const c = socialCache.activeChallenge;
+  if (!c) return renderChallenge();
+  const board = socialCache.board || [];
+  const signed = isSignedIn();
+  const link = c.invite_code ? inviteLink(c.invite_code) : '';
   return `<div class="screen fade-in">
     <div class="topbar">
-      <button class="back" data-go="home">←</button>
-      <h2>Weekly Challenge</h2>
+      <button class="back" data-go="challenge">←</button>
+      <h2>${c.title}</h2>
     </div>
-    <div class="card">
-      <h3>${DEFAULT_CHALLENGE.title}</h3>
-      <p class="muted mb">${DEFAULT_CHALLENGE.description}</p>
-      <div class="exercise-list">
-        ${DEFAULT_CHALLENGE.exercises.map(e =>
-          `<div class="ex-item"><span class="ex-ico-sm">${iconFor(e.name)}</span><span>${e.name}</span><span class="muted">${e.reps ? e.reps + ' reps' : e.duration_seconds + 's'}</span></div>`
-        ).join('')}
-      </div>
-      <button class="btn primary mt" data-go="challengeRun">Start Challenge</button>
+    <p class="muted mb">${c.description || ''}</p>
+    <div class="card mb">
+      <p class="muted" style="font-size:12px">Invite code</p>
+      <p><strong style="letter-spacing:0.08em">${c.invite_code || '—'}</strong></p>
+      ${link ? `<p class="muted" style="font-size:12px;word-break:break-all">${link}</p>
+      <div class="btn-stack">
+        <button class="btn secondary" data-action="copy-invite">Copy link</button>
+        <button class="btn secondary" data-action="share-invite">Share</button>
+      </div>` : ''}
     </div>
-    <h3 class="section">Leaderboard</h3>
-    <div class="card tight">
-      ${sorted.length === 0 ? '<p class="muted center" style="padding:16px">No entries yet</p>' :
-        sorted.map((e, i) => `
-          <div class="lb-row">
-            <span class="rank">#${i + 1}</span>
-            <span class="name">${e.name || 'Athlete'}</span>
-            <span class="time">${formatTime(e.score_seconds)}</span>
-          </div>`).join('')}
+    <div class="card mb">
+      <h3>Circuit</h3>
+      ${(c.exercise_list || []).map(e =>
+        `<div class="ex-item"><span class="ex-item-text"><strong>${e.name}</strong></span>
+         <span class="muted">${e.reps ? e.reps + ' reps' : (e.duration_seconds || e.duration || '') + 's'}</span></div>`
+      ).join('')}
     </div>
-    ${renderLegalFooter()}
-    ${renderTabBar('home')}
+    <div class="card mb">
+      <h3>Leaderboard</h3>
+      <p class="muted mb" style="font-size:12px">Best time · lower ranks higher · friends honor system</p>
+      ${board.length ? board.map(r => `
+        <div class="board-row ${r.user_id === currentUser?.id ? 'me' : ''}">
+          <span class="board-rank">#${r.rank}</span>
+          <span class="board-name">${r.name}</span>
+          <span class="board-score">${formatTime(r.score_seconds)}</span>
+        </div>`).join('') : '<p class="muted">No times yet — be first.</p>'}
+    </div>
+    <div class="btn-stack">
+      <button class="btn primary" data-action="run-challenge" ${signed?'':'disabled'}>Race it</button>
+      <button class="btn ghost" data-go="challenge">Back</button>
+    </div>
   </div>`;
 }
 
 function renderChallengeRun() {
+  const c = socialCache.activeChallenge || DEFAULT_CHALLENGE;
+  const list = c.exercise_list || DEFAULT_CHALLENGE.exercises || [];
   return `<div class="screen center fade-in">
-    <p class="muted">Challenge timer</p>
-    <div class="timer-display big" id="c-timer">0:00</div>
-    <div class="exercise-list left">
-      ${DEFAULT_CHALLENGE.exercises.map(e =>
-        `<div class="ex-item"><span class="ex-ico-sm">${iconFor(e.name)}</span><span>${e.name}</span><span class="muted">${e.reps ? e.reps + ' reps' : e.duration_seconds + 's'}</span></div>`
+    <p class="muted">${c.title}</p>
+    <div class="timer-display big" id="c-timer">00:00</div>
+    <p class="muted mb">Tap start, finish the circuit, submit your time.</p>
+    <div class="exercise-list mb">
+      ${list.map(e =>
+        `<div class="ex-item"><span class="ex-item-text"><strong>${e.name}</strong></span>
+         <span class="muted">${e.reps ? e.reps + ' reps' : (e.duration_seconds || e.duration || '') + 's'}</span></div>`
       ).join('')}
     </div>
     <div class="btn-stack">
       <button class="btn primary" id="c-toggle" data-action="toggle-challenge">Start Timer</button>
       <button class="btn secondary hidden" id="c-finish" data-action="finish-challenge">Submit Time</button>
-      <button class="btn ghost" data-go="challenge">Cancel</button>
+      <button class="btn ghost" data-action="open-challenge" data-id="${c.id || ''}">Cancel</button>
     </div>
   </div>`;
 }
@@ -1237,7 +1594,7 @@ function renderProfile() {
 
 function bindEvents() {
   $all('[data-go]').forEach(el => el.onclick = (e) => { e.preventDefault(); navigate(el.dataset.go); });
-  $all('[data-action]').forEach(el => el.onclick = () => handleAction(el.dataset.action));
+  $all('[data-action]').forEach(el => el.onclick = () => handleAction(el.dataset.action, el));
   $all('[data-workout]').forEach(el => el.onclick = () => {
     store.set('selectedWorkout', el.dataset.workout);
     navigate('workoutDetail');
@@ -1301,7 +1658,8 @@ function advancePhase() {
   }
 }
 
-async function handleAction(action) {
+async function handleAction(action, el) {
+  el = el || document.querySelector(`[data-action="${action}"]`);
   const msg = $('#auth-msg');
 
   if (action === 'guest') {
@@ -1335,7 +1693,10 @@ async function handleAction(action) {
     try {
       const { error } = await supabaseClient.auth.signInWithOAuth({
         provider,
-        options: { redirectTo: window.location.origin + '/' }
+        options: {
+          redirectTo: window.location.origin + '/?app=1',
+          queryParams: provider === 'google' ? { access_type: 'offline', prompt: 'consent' } : undefined
+        }
       });
       if (error) throw error;
     } catch (e) {
@@ -1422,6 +1783,106 @@ async function handleAction(action) {
     return;
   }
 
+
+  if (action === 'create-challenge') {
+    if (!isSignedIn()) { navigate('login'); return; }
+    const workoutId = $('#create-workout')?.value;
+    const days = parseInt($('#create-days')?.value || '7', 10);
+    try {
+      const ch = await createFriendsChallenge({ workoutId, days });
+      socialCache.activeChallenge = ch;
+      await refreshSocial();
+      await loadLeaderboard(ch.id);
+      const link = inviteLink(ch.invite_code);
+      try { await navigator.clipboard.writeText(link); } catch (_) {}
+      alert('Challenge created.\\nCode: ' + ch.invite_code + '\\nLink copied (if allowed):\\n' + link);
+      navigate('challengeDetail');
+    } catch (e) {
+      alert(e.message || 'Could not create challenge');
+    }
+    return;
+  }
+
+  if (action === 'join-code' || action === 'join-pending') {
+    if (!isSignedIn()) { navigate('login'); return; }
+    const code = action === 'join-pending'
+      ? pendingJoinCode
+      : ($('#join-code')?.value || '').trim();
+    try {
+      const ch = await joinChallengeByCode(code);
+      pendingJoinCode = null;
+      socialCache.activeChallenge = ch;
+      await refreshSocial();
+      await loadLeaderboard(ch.id);
+      alert('Joined ' + ch.title);
+      navigate('challengeDetail');
+    } catch (e) {
+      alert(e.message || 'Join failed');
+    }
+    return;
+  }
+
+  if (action === 'open-challenge') {
+    const id = el.dataset.id;
+    const ch = (socialCache.challenges || []).find(c => c.id === id)
+      || (socialCache.mine || []).find(c => c.id === id)
+      || socialCache.activeChallenge;
+    if (!ch && id) {
+      // fetch one
+      if (supabaseClient) {
+        const { data } = await supabaseClient.from('challenges').select('*').eq('id', id).maybeSingle();
+        socialCache.activeChallenge = data;
+      }
+    } else {
+      socialCache.activeChallenge = ch;
+    }
+    if (!socialCache.activeChallenge) { navigate('challenge'); return; }
+    await loadLeaderboard(socialCache.activeChallenge.id);
+    navigate('challengeDetail');
+    return;
+  }
+
+  if (action === 'copy-invite') {
+    const c = socialCache.activeChallenge;
+    if (!c?.invite_code) return;
+    const link = inviteLink(c.invite_code);
+    try {
+      await navigator.clipboard.writeText(link);
+      alert('Link copied');
+    } catch (_) {
+      prompt('Copy this link', link);
+    }
+    return;
+  }
+
+  if (action === 'share-invite') {
+    const c = socialCache.activeChallenge;
+    if (!c?.invite_code) return;
+    const link = inviteLink(c.invite_code);
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: c.title, text: 'Join my Vyrn challenge', url: link });
+      } catch (_) {}
+    } else {
+      try {
+        await navigator.clipboard.writeText(link);
+        alert('Link copied');
+      } catch (_) {
+        prompt('Share this link', link);
+      }
+    }
+    return;
+  }
+
+  if (action === 'run-challenge') {
+    if (!isSignedIn()) { navigate('login'); return; }
+    window._cRunning = false;
+    window._cSec = 0;
+    clearInterval(window._cTimer);
+    navigate('challengeRun');
+    return;
+  }
+
   if (action === 'start-session') {
     const id = store.get('selectedWorkout');
     const w = WORKOUTS[id];
@@ -1499,7 +1960,7 @@ async function handleAction(action) {
       window._cSec = 0;
       ensureAudio();
       sfxStart();
-      speak('Challenge started');
+      speak("Let's go! Challenge started. Push for your best time!");
       $('#c-toggle').textContent = 'Pause';
       $('#c-finish').classList.remove('hidden');
       window._cTimer = setInterval(() => {
@@ -1518,14 +1979,33 @@ async function handleAction(action) {
     clearInterval(window._cTimer);
     window._cRunning = false;
     sfxDone();
-    speak('Time submitted');
+    const secs = window._cSec || 0;
+    const ch = socialCache.activeChallenge;
+    if (ch && ch.id && isSignedIn()) {
+      try {
+        await submitChallengeTime(ch.id, secs);
+        speak('Time submitted. Great work!');
+        await loadLeaderboard(ch.id);
+        alert('Submitted · ' + formatTime(secs));
+        navigate('challengeDetail');
+      } catch (e) {
+        alert(e.message || 'Submit failed — saved locally');
+        const entries = store.get('entries') || [];
+        entries.push({ user_id: currentUser.id, name: displayName(), score_seconds: secs, at: Date.now(), challenge_id: ch.id });
+        store.set('entries', entries);
+        navigate('challengeDetail');
+      }
+      return;
+    }
+    speak('Time submitted. Great work!');
     const entries = store.get('entries') || [];
-    const name = currentUser?.email?.split('@')[0] || 'Athlete';
+    const name = displayName();
     const filtered = entries.filter(e => e.user_id !== (currentUser?.id || 'guest'));
-    filtered.push({ user_id: currentUser?.id || 'guest', name, score_seconds: window._cSec || 0, at: Date.now() });
+    filtered.push({ user_id: currentUser?.id || 'guest', name, score_seconds: secs, at: Date.now() });
     store.set('entries', filtered);
-    alert(`Submitted · ${formatTime(window._cSec || 0)}`);
+    alert('Submitted · ' + formatTime(secs));
     navigate('challenge');
+    return;
   }
 }
 
