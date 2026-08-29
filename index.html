@@ -1202,13 +1202,31 @@
       width: 84%;
       height: 84%;
       object-fit: contain;
+      opacity: 0;
+      transform: scale(0.96);
+      will-change: opacity, transform;
+    }
+    /* CDN line-art PNGs: force white figure on dark stage */
+    img.wg-frame {
       filter:
         brightness(0) invert(1)
         drop-shadow(0 0 12px rgba(255, 59, 47, 0.35))
         drop-shadow(0 4px 16px rgba(0,0,0,0.4));
-      opacity: 0;
-      transform: scale(0.96);
-      will-change: opacity, transform;
+    }
+    /* Custom SVG demos: already white on dark — do NOT invert (that made them invisible) */
+    .wg-frame.custom-frame {
+      filter: none;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .wg-frame.custom-frame svg {
+      width: 100%;
+      height: 100%;
+      display: block;
     }
     /* 3-frame form cycle ~2.4s */
     .wg-frame.f1 {
@@ -1222,6 +1240,9 @@
       animation: wgCycle 2.4s ease-in-out infinite;
       animation-delay: -1.6s;
     }
+    /* Failsafe: if animation unsupported, show first frame */
+    .wg-stage-hero:not(:has(.wg-frame.f1)) { min-height: 120px; }
+    .custom-stage { background: #1a1010; }
     @keyframes wgCycle {
       0%   { opacity: 0; transform: scale(0.96); }
       8%   { opacity: 1; transform: scale(1); }
