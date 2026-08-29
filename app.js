@@ -21,6 +21,7 @@ let _voicesReady = false;
 let _lastCoachFive = false;
 let socialCache = { challenges: [], mine: [], activity: [], board: [], activeChallenge: null, loading: false };
 let pendingJoinCode = null;
+let authProviders = { google: false, apple: false, email: true };
 
 const store = {
   get(key) {
@@ -1276,7 +1277,26 @@ async function init() {
   warmVoices();
 
   if (window.supabase) {
-    supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
+        flowType: 'pkce'
+      }
+    });
+    // Detect which OAuth providers are enabled on this project
+    try {
+      const res = await fetch(SUPABASE_URL + '/auth/v1/settings', {
+        headers: { apikey: SUPABASE_ANON_KEY }
+      });
+      if (res.ok) {
+        const settings = await res.json();
+        authProviders.google = !!(settings.external && settings.external.google);
+        authProviders.apple = !!(settings.external && settings.external.apple);
+        authProviders.email = settings.external ? settings.external.email !== false : true;
+      }
+    } catch (_) {}
     const { data: { session } } = await supabaseClient.auth.getSession();
     if (session?.user) {
       currentUser = session.user;
@@ -1405,18 +1425,24 @@ function renderWelcome() {
 }
 
 function renderLogin() {
+  const gOn = !!authProviders.google;
+  const aOn = !!authProviders.apple;
   return `<div class="screen center fade-in">
     <img class="brand-logo-sm" src="/assets/logo.png" alt="Vyrn" />
     <h2>Welcome</h2>
-    <p class="muted mb">Sign in to sync history across devices</p>
+    <p class="muted mb">Sign in to sync history and join challenges</p>
     <div class="btn-stack" style="max-width:340px">
-      <button class="btn oauth google" data-action="oauth-google">
+      <button class="btn oauth google ${gOn ? '' : 'oauth-disabled'}" data-action="oauth-google" ${gOn ? '' : 'aria-disabled="true"'}>
         <span class="oauth-ico">G</span> Continue with Google
       </button>
-      <button class="btn oauth apple" data-action="oauth-apple">
+      <button class="btn oauth apple ${aOn ? '' : 'oauth-disabled'}" data-action="oauth-apple" ${aOn ? '' : 'aria-disabled="true"'}>
         <span class="oauth-ico"></span> Continue with Apple
       </button>
     </div>
+    ${(!gOn || !aOn) ? `<p class="muted center" style="font-size:12px;max-width:320px;margin:8px auto 0">
+      ${!gOn && !aOn ? 'Google & Apple sign-in are not enabled on this project yet.' : (!gOn ? 'Google sign-in is not enabled yet.' : 'Apple sign-in is not enabled yet.')}
+      Use email below, or enable providers in Supabase Auth.
+    </p>` : ''}
     <div class="divider"><span>or email</span></div>
     <div class="form">
       <input id="email" type="email" placeholder="Email" autocomplete="email" />
@@ -1429,6 +1455,7 @@ function renderLogin() {
     <div class="btn-stack" style="max-width:340px;margin-top:0">
       <button class="btn secondary" data-action="demo-free">Demo Free user</button>
       <button class="btn secondary" data-action="demo-pro">Demo Pro user</button>
+      <button class="btn secondary" data-action="demo-pro2">Demo Pro 2</button>
       <button class="btn ghost" data-go="welcome">← Back</button>
     </div>
   </div>`;
@@ -1923,25 +1950,48 @@ async function handleAction(action, el) {
     navigate('home');
     return;
   }
+  if (action === 'demo-pro2') {
+    store.set('guest', { email: 'pro2@vyrn.demo', id: 'demo-pro-2' });
+    currentUser = { id: 'demo-pro-2', email: 'pro2@vyrn.demo', isGuest: true };
+    isPro = true; store.set('isPro', true);
+    navigate('home');
+    return;
+  }
 
   if (action === 'oauth-google' || action === 'oauth-apple') {
     const provider = action === 'oauth-google' ? 'google' : 'apple';
+    const label = provider === 'google' ? 'Google' : 'Apple';
     if (!supabaseClient) {
-      if (msg) msg.textContent = 'Auth unavailable offline. Use Demo or Email.';
+      if (msg) msg.textContent = 'Auth unavailable. Use email or Demo.';
       return;
     }
+    if (provider === 'google' && !authProviders.google) {
+      if (msg) msg.textContent = 'Google is not enabled in Supabase Auth yet. Use email (pro1@vyrn.test) or enable Google in the dashboard.';
+      return;
+    }
+    if (provider === 'apple' && !authProviders.apple) {
+      if (msg) msg.textContent = 'Apple is not enabled in Supabase Auth yet. Use email or enable Apple in the dashboard (requires Apple Developer account).';
+      return;
+    }
+    if (msg) msg.textContent = 'Redirecting to ' + label + '…';
     try {
-      const { error } = await supabaseClient.auth.signInWithOAuth({
+      const redirectTo = window.location.origin + '/?app=1';
+      const { data, error } = await supabaseClient.auth.signInWithOAuth({
         provider,
         options: {
-          redirectTo: window.location.origin + '/?app=1',
-          queryParams: provider === 'google' ? { access_type: 'offline', prompt: 'consent' } : undefined
+          redirectTo,
+          skipBrowserRedirect: false,
+          queryParams: provider === 'google' ? { access_type: 'offline', prompt: 'select_account' } : undefined
         }
       });
       if (error) throw error;
+      // Fallback if client did not navigate
+      if (data && data.url) {
+        window.location.href = data.url;
+      }
     } catch (e) {
-      if (msg) msg.textContent = (e.message || 'Provider not configured') +
-        ' — enable Google/Apple in Supabase Auth, or use Email / Demo.';
+      const hint = (e && e.message) ? e.message : 'Provider error';
+      if (msg) msg.textContent = hint + ' — enable ' + label + ' under Supabase → Authentication → Providers, and add redirect URL: ' + window.location.origin + '/?app=1';
     }
     return;
   }
