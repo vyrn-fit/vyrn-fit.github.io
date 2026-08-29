@@ -179,104 +179,253 @@ const WG_MAP = {
   gym: 'push-up'
 };
 // Prefer pure bodyweight squat if available
+
+// —— Bodyweight-only form demos ——
+// Prefer custom SVG when CDN art shows machines/bands/dumbbells/treadmills.
+
+const WG_SAFE = new Set([
+  'bodyweight-squat','push-up','knee-push-up','wall-push-up','diamond-push-up','pike-push-up',
+  'plank','side-plank','plank-shoulder-tap','mountain-climber','burpee','jumping-jack','jump-squat',
+  'reverse-lunge','walking-lunge','lateral-lunge','step-up','glute-bridge','glute-bridge-march',
+  'bird-dog','dead-bug','superman','hollow-body-hold','russian-twist','high-knees',
+  'cat-cow-stretch','worlds-greatest-stretch','toe-touch','kneeling-hip-flexor-stretch',
+  'torso-twist-stretch','wall-sit','chair-dip','inchworm','bicycle-crunch','bear-crawl'
+]);
+
+function customKey(name) {
+  const n = (name || '').toLowerCase();
+  if (/standing marches|march in place|march or jog|standing march/.test(n)) return 'march';
+  if (/\bmarch\b/.test(n) && !/glute bridge march/.test(n)) return 'march';
+  if (/calf/.test(n)) return 'calf';
+  if (/neck & shoulder|neck and shoulder|slow neck|neck roll/.test(n)) return 'neck_shoulder';
+  if (/chin tuck/.test(n)) return 'chin_tuck';
+  if (/hip circle|standing hip circle/.test(n)) return 'hip_circle';
+  if (/ankle/.test(n)) return 'ankle';
+  if (/side bend/.test(n)) return 'side_bend';
+  if (/shoulder blade|scap|shoulder car/.test(n)) return 'scap_squeeze';
+  if (/chest opener|standing chest/.test(n)) return 'chest_open';
+  if (/arm circle/.test(n)) return 'arm_circle';
+  if (/cool-?down walk|walk the|walk in place|easy jog|jog warm|sprint|fast walk|perimeter/.test(n)) return 'walk_place';
+  if (/seated torso|torso twist/.test(n) && /seated/.test(n)) return 'seated_twist';
+  if (/thoracic|seated thoracic/.test(n)) return 'thoracic';
+  if (/dead hang|active hang|scap pull/.test(n)) return 'hang_alt'; // playground bar OK as pose without machine
+  return null;
+}
+
 function wgSlug(name) {
   const n = (name || '').toLowerCase().trim();
+  const ck = customKey(name);
+  // If we have a custom demo, still return a safe fallback slug for any legacy paths
+  if (ck) {
+    if (ck === 'march') return 'high-knees';
+    if (ck === 'walk_place') return 'high-knees';
+    if (ck === 'calf') return 'bodyweight-squat';
+    return 'arm-circles';
+  }
 
-  // —— Strength / push ——
   if (/wall push/.test(n)) return 'wall-push-up';
   if (/pike push/.test(n)) return 'pike-push-up';
   if (/diamond|narrow push/.test(n)) return 'diamond-push-up';
-  if (/decline push/.test(n)) return 'decline-push-up';
-  if (/wide push/.test(n)) return 'wide-push-up';
   if (/incline push|knee push|knee ok|push-ups? \(knee/.test(n)) return 'knee-push-up';
-  if (/push-?ups?|push ups/.test(n)) return 'push-up';
+  if (/push-?ups?/.test(n)) return 'push-up';
   if (/chair dip|bench dip/.test(n)) return 'chair-dip';
 
-  // —— Squat / sit-to-stand family ——
   if (/sit-?to-?stand|chair stand|desk chair|bench sit/.test(n)) return 'bodyweight-squat';
-  if (/jump squat|squat jump|squat jumps/.test(n)) return 'jump-squat';
-  if (/pistol/.test(n)) return 'pistol-squat';
+  if (/jump squat|squat jump/.test(n)) return 'jump-squat';
   if (/wall sit/.test(n)) return 'wall-sit';
   if (/sumo|air squat|squat pulse|deep squat|bodyweight squat|\bsquats?\b/.test(n)) return 'bodyweight-squat';
 
-  // —— Lunges / steps ——
   if (/walking lunge/.test(n)) return 'walking-lunge';
   if (/side lunge|lateral lunge|gentle side lunge/.test(n)) return 'lateral-lunge';
   if (/reverse lunge|\blunges?\b/.test(n)) return 'reverse-lunge';
   if (/step-?up|bench step|park-bench step/.test(n)) return 'step-up';
-  if (/calf/.test(n)) return 'standing-calf-raise';
   if (/broad jump/.test(n)) return 'jump-squat';
 
-  // —— Core ——
   if (/side plank/.test(n)) return 'side-plank';
   if (/shoulder tap|plank shoulder/.test(n)) return 'plank-shoulder-tap';
   if (/\bplank\b/.test(n)) return 'plank';
   if (/mountain climber/.test(n)) return 'mountain-climber';
+  if (/glute bridge march/.test(n)) return 'glute-bridge-march';
   if (/glute bridge|tabletop|reverse table/.test(n)) return 'glute-bridge';
   if (/bird dog/.test(n)) return 'bird-dog';
   if (/dead bug/.test(n)) return 'dead-bug';
   if (/superman/.test(n)) return 'superman';
   if (/hollow/.test(n)) return 'hollow-body-hold';
-  if (/russian twist|torso twist|seated torso/.test(n)) return 'russian-twist';
+  if (/russian twist/.test(n)) return 'russian-twist';
   if (/bicycle/.test(n)) return 'bicycle-crunch';
 
-  // —— Cardio / continuous ——
   if (/jumping jack|step-?jack/.test(n)) return 'jumping-jack';
   if (/burpee/.test(n)) return 'burpee';
   if (/high knee/.test(n)) return 'high-knees';
-  if (/sprint|fast walk|jog|run|walk the|cool-?down walk|march|standing marches|perimeter/.test(n)) return 'walking';
 
-  // —— Mobility / stretch ——
-  if (/arm circle|shoulder car|hip circle|neck|chin tuck|ankle rock/.test(n)) return 'arm-circles';
   if (/cat-?cow|seated cat/.test(n)) return 'cat-cow-stretch';
   if (/hip flexor/.test(n)) return 'kneeling-hip-flexor-stretch';
   if (/hamstring|toe reach|fold/.test(n)) return 'toe-touch';
-  if (/shoulder blade|scap|band pull/.test(n)) return 'band-pull-apart';
-  if (/thoracic|rotation|chest opener|standing chest/.test(n)) return 'torso-twist-stretch';
-  if (/side bend/.test(n)) return 'dumbbell-side-bend';
+  if (/thoracic|rotation/.test(n)) return 'torso-twist-stretch';
   if (/world.?greatest|stretch flow|easy stretch|stretch & breathe|breathing stretch|cool-?down stretch|stretch on grass|\bstretch\b/.test(n)) return 'worlds-greatest-stretch';
   if (/inchworm|good morning/.test(n)) return 'inchworm';
-  if (/dead hang|active hang|scap pull/.test(n)) return 'active-hang';
+  if (/bear crawl/.test(n)) return 'bear-crawl';
 
-  // Category fallbacks (never random plank for non-core)
   if (/push|dip/.test(n)) return 'push-up';
   if (/squat|sit/.test(n)) return 'bodyweight-squat';
   if (/lunge|step/.test(n)) return 'reverse-lunge';
   if (/plank|core|bridge/.test(n)) return 'plank';
   if (/jump|jack|burpee/.test(n)) return 'jumping-jack';
-  if (/walk|jog|run|march/.test(n)) return 'walking';
   if (/stretch|open|roll|mobility/.test(n)) return 'worlds-greatest-stretch';
-
   return 'bodyweight-squat';
 }
+
 function wgFrameUrl(slug, frame) {
   return `${WG_CDN}/${slug}/frame-${frame}.png`;
 }
 
+/** Equipment-free SVG silhouettes — Setup / Move / Finish */
+function customFrames(key) {
+  const stroke = '#f5f5f5';
+  const bg = '#1a1010';
+  // Shared figure helpers as inline SVG groups (viewBox 0 0 200 220)
+  const svg = (body) => `<svg viewBox="0 0 200 220" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <rect width="200" height="220" fill="${bg}"/>
+    <g fill="none" stroke="${stroke}" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">${body}</g>
+  </svg>`;
+
+  const head = (x,y) => `<circle cx="${x}" cy="${y}" r="14"/>`;
+
+  const frames = {
+    march: [
+      // setup: stand
+      svg(`${head(100,42)}<path d="M100 56 V120"/><path d="M100 70 L70 110"/><path d="M100 70 L130 110"/><path d="M100 120 L80 190"/><path d="M100 120 L120 190"/>`),
+      // move: right knee up
+      svg(`${head(100,42)}<path d="M100 56 V118"/><path d="M100 70 L72 100"/><path d="M100 70 L128 95"/><path d="M100 118 L78 190"/><path d="M100 118 L130 150 L145 125"/>`),
+      // finish: left knee up
+      svg(`${head(100,42)}<path d="M100 56 V118"/><path d="M100 70 L72 95"/><path d="M100 70 L128 100"/><path d="M100 118 L70 150 L55 125"/><path d="M100 118 L122 190"/>`)
+    ],
+    calf: [
+      svg(`${head(100,40)}<path d="M100 54 V125"/><path d="M100 70 L68 115"/><path d="M100 70 L132 115"/><path d="M100 125 L82 195"/><path d="M100 125 L118 195"/><path d="M70 198 H130"/>`),
+      svg(`${head(100,28)}<path d="M100 42 V112"/><path d="M100 58 L68 100"/><path d="M100 58 L132 100"/><path d="M100 112 L84 175"/><path d="M100 112 L116 175"/><path d="M78 178 L84 175 L90 178"/><path d="M110 178 L116 175 L122 178"/>`),
+      svg(`${head(100,40)}<path d="M100 54 V125"/><path d="M100 70 L68 115"/><path d="M100 70 L132 115"/><path d="M100 125 L82 195"/><path d="M100 125 L118 195"/><path d="M70 198 H130"/>`)
+    ],
+    neck_shoulder: [
+      // neutral
+      svg(`${head(100,48)}<path d="M100 62 V120"/><path d="M100 75 L65 105"/><path d="M100 75 L135 105"/><path d="M100 120 L82 195"/><path d="M100 120 L118 195"/>`),
+      // shoulders up + head tilt
+      svg(`${head(112,44)}<path d="M100 62 V120"/><path d="M100 72 L62 88"/><path d="M100 72 L138 88"/><path d="M100 120 L82 195"/><path d="M100 120 L118 195"/>`),
+      // shoulders back
+      svg(`${head(100,48)}<path d="M100 62 V120"/><path d="M100 78 L55 100"/><path d="M100 78 L145 100"/><path d="M100 120 L82 195"/><path d="M100 120 L118 195"/>`)
+    ],
+    chin_tuck: [
+      svg(`${head(100,48)}<path d="M100 62 V120"/><path d="M100 75 L70 110"/><path d="M100 75 L130 110"/><path d="M100 120 L82 195"/><path d="M100 120 L118 195"/>`),
+      svg(`${head(92,50)}<path d="M100 62 V120"/><path d="M100 75 L70 110"/><path d="M100 75 L130 110"/><path d="M100 120 L82 195"/><path d="M100 120 L118 195"/><path d="M78 48 H92"/>`),
+      svg(`${head(100,48)}<path d="M100 62 V120"/><path d="M100 75 L70 110"/><path d="M100 75 L130 110"/><path d="M100 120 L82 195"/><path d="M100 120 L118 195"/>`)
+    ],
+    hip_circle: [
+      svg(`${head(100,42)}<path d="M100 56 V120"/><path d="M100 70 L70 110"/><path d="M100 70 L130 110"/><path d="M100 120 L80 190"/><path d="M100 120 L120 190"/>`),
+      svg(`${head(100,42)}<path d="M100 56 V118"/><path d="M100 70 L70 110"/><path d="M100 70 L130 100"/><path d="M100 118 L78 190"/><path d="M100 118 L135 155 L150 170"/>`),
+      svg(`${head(100,42)}<path d="M100 56 V118"/><path d="M100 70 L70 100"/><path d="M100 70 L130 110"/><path d="M100 118 L65 155 L50 170"/><path d="M100 118 L122 190"/>`)
+    ],
+    ankle: [
+      svg(`${head(100,42)}<path d="M100 56 V125"/><path d="M100 70 L72 112"/><path d="M100 70 L128 112"/><path d="M100 125 L85 195"/><path d="M100 125 L115 195"/><path d="M75 198 H125"/>`),
+      svg(`${head(100,42)}<path d="M100 56 V125"/><path d="M100 70 L72 112"/><path d="M100 70 L128 112"/><path d="M100 125 L85 195"/><path d="M100 125 L120 185 L135 195"/>`),
+      svg(`${head(100,42)}<path d="M100 56 V125"/><path d="M100 70 L72 112"/><path d="M100 70 L128 112"/><path d="M100 125 L80 185 L65 195"/><path d="M100 125 L115 195"/>`)
+    ],
+    side_bend: [
+      svg(`${head(100,42)}<path d="M100 56 V120"/><path d="M100 70 L70 100"/><path d="M100 70 L130 100"/><path d="M100 120 L82 195"/><path d="M100 120 L118 195"/>`),
+      svg(`${head(118,48)}<path d="M108 60 V120"/><path d="M108 72 L85 55"/><path d="M108 75 L130 115"/><path d="M108 120 L90 195"/><path d="M108 120 L125 195"/>`),
+      svg(`${head(82,48)}<path d="M92 60 V120"/><path d="M92 75 L70 115"/><path d="M92 72 L115 55"/><path d="M92 120 L75 195"/><path d="M92 120 L110 195"/>`)
+    ],
+    scap_squeeze: [
+      svg(`${head(100,42)}<path d="M100 56 V120"/><path d="M100 72 L55 90"/><path d="M100 72 L145 90"/><path d="M100 120 L82 195"/><path d="M100 120 L118 195"/>`),
+      svg(`${head(100,42)}<path d="M100 56 V120"/><path d="M100 72 L40 85"/><path d="M100 72 L160 85"/><path d="M100 120 L82 195"/><path d="M100 120 L118 195"/>`),
+      svg(`${head(100,42)}<path d="M100 56 V120"/><path d="M100 75 L70 95"/><path d="M100 75 L130 95"/><path d="M100 120 L82 195"/><path d="M100 120 L118 195"/>`)
+    ],
+    chest_open: [
+      svg(`${head(100,42)}<path d="M100 56 V120"/><path d="M100 72 L70 110"/><path d="M100 72 L130 110"/><path d="M100 120 L82 195"/><path d="M100 120 L118 195"/>`),
+      svg(`${head(100,42)}<path d="M100 56 V120"/><path d="M100 70 L45 70"/><path d="M100 70 L155 70"/><path d="M100 120 L82 195"/><path d="M100 120 L118 195"/>`),
+      svg(`${head(100,42)}<path d="M100 56 V120"/><path d="M100 70 L40 55"/><path d="M100 70 L160 55"/><path d="M100 120 L82 195"/><path d="M100 120 L118 195"/>`)
+    ],
+    arm_circle: [
+      svg(`${head(100,42)}<path d="M100 56 V120"/><path d="M100 72 L60 120"/><path d="M100 72 L140 120"/><path d="M100 120 L82 195"/><path d="M100 120 L118 195"/>`),
+      svg(`${head(100,42)}<path d="M100 56 V120"/><path d="M100 70 L55 70"/><path d="M100 70 L145 70"/><path d="M100 120 L82 195"/><path d="M100 120 L118 195"/>`),
+      svg(`${head(100,42)}<path d="M100 56 V120"/><path d="M100 72 L70 50"/><path d="M100 72 L130 50"/><path d="M100 120 L82 195"/><path d="M100 120 L118 195"/>`)
+    ],
+    walk_place: [
+      svg(`${head(100,42)}<path d="M100 56 V118"/><path d="M100 70 L75 105"/><path d="M100 70 L125 105"/><path d="M100 118 L85 190"/><path d="M100 118 L115 190"/>`),
+      svg(`${head(100,42)}<path d="M100 56 V118"/><path d="M100 70 L72 100"/><path d="M100 70 L128 108"/><path d="M100 118 L80 190"/><path d="M100 118 L125 165 L130 190"/>`),
+      svg(`${head(100,42)}<path d="M100 56 V118"/><path d="M100 70 L72 108"/><path d="M100 70 L128 100"/><path d="M100 118 L75 165 L70 190"/><path d="M100 118 L120 190"/>`)
+    ],
+    seated_twist: [
+      svg(`${head(100,50)}<path d="M100 64 V110"/><path d="M100 78 L70 100"/><path d="M100 78 L130 100"/><path d="M70 140 H130"/><path d="M85 140 V195"/><path d="M115 140 V195"/>`),
+      svg(`${head(115,52)}<path d="M105 66 V110"/><path d="M105 80 L125 70"/><path d="M105 80 L90 105"/><path d="M70 140 H130"/><path d="M85 140 V195"/><path d="M115 140 V195"/>`),
+      svg(`${head(85,52)}<path d="M95 66 V110"/><path d="M95 80 L75 70"/><path d="M95 80 L110 105"/><path d="M70 140 H130"/><path d="M85 140 V195"/><path d="M115 140 V195"/>`)
+    ],
+    thoracic: [
+      svg(`${head(100,48)}<path d="M100 62 V120"/><path d="M100 75 L65 100"/><path d="M100 75 L135 100"/><path d="M100 120 L82 195"/><path d="M100 120 L118 195"/>`),
+      svg(`${head(100,48)}<path d="M100 62 V120"/><path d="M100 72 L50 80"/><path d="M100 78 L130 110"/><path d="M100 120 L82 195"/><path d="M100 120 L118 195"/>`),
+      svg(`${head(100,48)}<path d="M100 62 V120"/><path d="M100 78 L70 110"/><path d="M100 72 L150 80"/><path d="M100 120 L82 195"/><path d="M100 120 L118 195"/>`)
+    ],
+    hang_alt: [
+      // no bar machine — arms overhead reach (active hang simulation without gym frame)
+      svg(`${head(100,70)}<path d="M100 84 V130"/><path d="M100 95 L70 130"/><path d="M100 95 L130 130"/><path d="M100 130 L82 195"/><path d="M100 130 L118 195"/>`),
+      svg(`${head(100,55)}<path d="M100 69 V125"/><path d="M100 80 L55 55"/><path d="M100 80 L145 55"/><path d="M100 125 L82 195"/><path d="M100 125 L118 195"/>`),
+      svg(`${head(100,50)}<path d="M100 64 V120"/><path d="M100 75 L50 40"/><path d="M100 75 L150 40"/><path d="M100 120 L82 195"/><path d="M100 120 L118 195"/>`)
+    ]
+  };
+  return frames[key] || frames.march;
+}
+
+function customDemoHtml(name, key) {
+  const frames = customFrames(key);
+  const labels = ['Setup', 'Move', 'Finish'];
+  const strip = frames.map((f, i) => `
+    <div class="wg-cell">
+      <div class="wg-cell-frame custom-frame">${f}</div>
+      <span class="wg-label">${labels[i]}</span>
+    </div>`).join('');
+  return `<div class="wg-demo custom-demo" data-custom="${key}" role="img" aria-label="Form guide for ${name}">
+    <div class="wg-stage wg-stage-hero custom-stage">
+      <div class="wg-frame f1 custom-frame">${frames[0]}</div>
+      <div class="wg-frame f2 custom-frame">${frames[1]}</div>
+      <div class="wg-frame f3 custom-frame">${frames[2]}</div>
+      <div class="wg-glow"></div>
+    </div>
+    <div class="wg-strip" aria-hidden="true">${strip}</div>
+    <p class="wg-credit">Equipment-free form · Setup → Move → Finish</p>
+  </div>`;
+}
+
 function prVideoUrl(name) { return null; }
+
 function prDemoHtml(name) { return null; }
 
 function wgDemoHtml(name, opts = {}) {
+  const ck = customKey(name);
+  if (ck) return customDemoHtml(name, ck);
+
   const slug = wgSlug(name);
+  // Never use known equipment-heavy CDN assets
+  const banned = new Set(['walking','running','standing-calf-raise','calf-raise','dumbbell-side-bend','band-pull-apart','active-hang','dead-hang','seated-calf-raise']);
+  const safeSlug = banned.has(slug) ? 'high-knees' : (WG_SAFE.has(slug) ? slug : 'bodyweight-squat');
+
   const labels = ['Setup', 'Move', 'Finish'];
   const strip = [1, 2, 3].map((n) => `
     <div class="wg-cell">
       <div class="wg-cell-frame">
-        <img src="${wgFrameUrl(slug, n)}" alt="${labels[n - 1]}" decoding="async" />
+        <img src="${wgFrameUrl(safeSlug, n)}" alt="${labels[n - 1]}" decoding="async" />
       </div>
       <span class="wg-label">${labels[n - 1]}</span>
     </div>`).join('');
-  return `<div class="wg-demo" data-wg="${slug}" role="img" aria-label="Form guide for ${name}">
+  return `<div class="wg-demo" data-wg="${safeSlug}" role="img" aria-label="Form guide for ${name}">
     <div class="wg-stage wg-stage-hero">
-      <img class="wg-frame f1" src="${wgFrameUrl(slug, 1)}" alt="" decoding="async" />
-      <img class="wg-frame f2" src="${wgFrameUrl(slug, 2)}" alt="" decoding="async" />
-      <img class="wg-frame f3" src="${wgFrameUrl(slug, 3)}" alt="" decoding="async" />
+      <img class="wg-frame f1" src="${wgFrameUrl(safeSlug, 1)}" alt="" decoding="async" />
+      <img class="wg-frame f2" src="${wgFrameUrl(safeSlug, 2)}" alt="" decoding="async" />
+      <img class="wg-frame f3" src="${wgFrameUrl(safeSlug, 3)}" alt="" decoding="async" />
       <div class="wg-glow"></div>
     </div>
     <div class="wg-strip" aria-hidden="true">${strip}</div>
     <p class="wg-credit">Animated form · Setup → Move → Finish</p>
   </div>`;
 }
+
 
 function photoUrl(name) {
   return '/assets/exercises/' + photoKey(name) + '.jpg?v=23';
