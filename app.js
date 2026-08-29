@@ -180,62 +180,74 @@ const WG_MAP = {
 };
 // Prefer pure bodyweight squat if available
 function wgSlug(name) {
-  const n = (name || '').toLowerCase();
+  const n = (name || '').toLowerCase().trim();
 
-  // Chair / sit-to-stand — the animated style reference
-  if (/sit-to-stand|sit to stand|chair stand|desk chair|bench sit/.test(n)) return 'bodyweight-squat';
-
+  // —— Strength / push ——
   if (/wall push/.test(n)) return 'wall-push-up';
-  if (/incline push|knee push|knee ok/.test(n)) return 'knee-push-up';
-  if (/diamond|narrow push/.test(n)) return 'diamond-push-up';
   if (/pike push/.test(n)) return 'pike-push-up';
-  if (/push-?ups?/.test(n)) return 'push-up';
+  if (/diamond|narrow push/.test(n)) return 'diamond-push-up';
+  if (/decline push/.test(n)) return 'decline-push-up';
+  if (/wide push/.test(n)) return 'wide-push-up';
+  if (/incline push|knee push|knee ok|push-ups? \(knee/.test(n)) return 'knee-push-up';
+  if (/push-?ups?|push ups/.test(n)) return 'push-up';
+  if (/chair dip|bench dip/.test(n)) return 'chair-dip';
 
-  if (/jump squat|squat jump/.test(n)) return 'jump-squat';
+  // —— Squat / sit-to-stand family ——
+  if (/sit-?to-?stand|chair stand|desk chair|bench sit/.test(n)) return 'bodyweight-squat';
+  if (/jump squat|squat jump|squat jumps/.test(n)) return 'jump-squat';
+  if (/pistol/.test(n)) return 'pistol-squat';
   if (/wall sit/.test(n)) return 'wall-sit';
-  if (/squat/.test(n)) return 'bodyweight-squat';
+  if (/sumo|air squat|squat pulse|deep squat|bodyweight squat|\bsquats?\b/.test(n)) return 'bodyweight-squat';
+
+  // —— Lunges / steps ——
   if (/walking lunge/.test(n)) return 'walking-lunge';
-  if (/side lunge|lateral lunge/.test(n)) return 'lateral-lunge';
-  if (/lunge/.test(n)) return 'reverse-lunge';
+  if (/side lunge|lateral lunge|gentle side lunge/.test(n)) return 'lateral-lunge';
+  if (/reverse lunge|\blunges?\b/.test(n)) return 'reverse-lunge';
   if (/step-?up|bench step|park-bench step/.test(n)) return 'step-up';
   if (/calf/.test(n)) return 'standing-calf-raise';
+  if (/broad jump/.test(n)) return 'jump-squat';
 
+  // —— Core ——
   if (/side plank/.test(n)) return 'side-plank';
-  if (/plank shoulder|shoulder tap/.test(n)) return 'plank-shoulder-tap';
-  if (/plank/.test(n)) return 'plank';
+  if (/shoulder tap|plank shoulder/.test(n)) return 'plank-shoulder-tap';
+  if (/\bplank\b/.test(n)) return 'plank';
   if (/mountain climber/.test(n)) return 'mountain-climber';
-  if (/glute bridge/.test(n)) return 'glute-bridge';
+  if (/glute bridge|tabletop|reverse table/.test(n)) return 'glute-bridge';
   if (/bird dog/.test(n)) return 'bird-dog';
   if (/dead bug/.test(n)) return 'dead-bug';
   if (/superman/.test(n)) return 'superman';
   if (/hollow/.test(n)) return 'hollow-body-hold';
-  if (/russian twist|torso twist/.test(n)) return 'russian-twist';
+  if (/russian twist|torso twist|seated torso/.test(n)) return 'russian-twist';
+  if (/bicycle/.test(n)) return 'bicycle-crunch';
 
-  if (/jumping jack|step-jack|step jack/.test(n)) return 'jumping-jack';
+  // —— Cardio / continuous ——
+  if (/jumping jack|step-?jack/.test(n)) return 'jumping-jack';
   if (/burpee/.test(n)) return 'burpee';
   if (/high knee/.test(n)) return 'high-knees';
-  if (/jog|run|walk the|cool-?down walk|march|standing marches/.test(n)) return 'walking';
+  if (/sprint|fast walk|jog|run|walk the|cool-?down walk|march|standing marches|perimeter/.test(n)) return 'walking';
 
-  if (/arm circle/.test(n)) return 'arm-circles';
+  // —— Mobility / stretch ——
+  if (/arm circle|shoulder car|hip circle|neck|chin tuck|ankle rock/.test(n)) return 'arm-circles';
   if (/cat-?cow|seated cat/.test(n)) return 'cat-cow-stretch';
   if (/hip flexor/.test(n)) return 'kneeling-hip-flexor-stretch';
   if (/hamstring|toe reach|fold/.test(n)) return 'toe-touch';
-  if (/shoulder blade|scap/.test(n)) return 'band-pull-apart';
-  if (/thoracic|rotation|torso/.test(n)) return 'torso-twist-stretch';
-  if (/^stretch$|world.?greatest|stretch flow|easy stretch|stretch & breathe|breathing stretch|cool-?down stretch/.test(n)) return 'worlds-greatest-stretch';
-  if (/chair dip|bench dip/.test(n)) return 'chair-dip';
-  if (/dead hang|active hang|scap pull/.test(n)) return 'active-hang';
-  if (/calf/.test(n)) return 'standing-calf-raise';
-  if (/diamond|narrow/.test(n)) return 'diamond-push-up';
-  if (/pike|wall push/.test(n)) return 'wall-push-up';
-  if (/side plank/.test(n)) return 'side-plank';
-  if (/tabletop|reverse table/.test(n)) return 'glute-bridge';
-  if (/mountain/.test(n)) return 'mountain-climber';
-  if (/sit-to-stand|sit to stand|chair stand|desk chair/.test(n)) return 'bodyweight-squat';
+  if (/shoulder blade|scap|band pull/.test(n)) return 'band-pull-apart';
+  if (/thoracic|rotation|chest opener|standing chest/.test(n)) return 'torso-twist-stretch';
   if (/side bend/.test(n)) return 'dumbbell-side-bend';
-  if (/neck|chin tuck|shoulder car|hip circle/.test(n)) return 'arm-circles';
+  if (/world.?greatest|stretch flow|easy stretch|stretch & breathe|breathing stretch|cool-?down stretch|stretch on grass|\bstretch\b/.test(n)) return 'worlds-greatest-stretch';
+  if (/inchworm|good morning/.test(n)) return 'inchworm';
+  if (/dead hang|active hang|scap pull/.test(n)) return 'active-hang';
 
-  return 'plank';
+  // Category fallbacks (never random plank for non-core)
+  if (/push|dip/.test(n)) return 'push-up';
+  if (/squat|sit/.test(n)) return 'bodyweight-squat';
+  if (/lunge|step/.test(n)) return 'reverse-lunge';
+  if (/plank|core|bridge/.test(n)) return 'plank';
+  if (/jump|jack|burpee/.test(n)) return 'jumping-jack';
+  if (/walk|jog|run|march/.test(n)) return 'walking';
+  if (/stretch|open|roll|mobility/.test(n)) return 'worlds-greatest-stretch';
+
+  return 'bodyweight-squat';
 }
 function wgFrameUrl(slug, frame) {
   return `${WG_CDN}/${slug}/frame-${frame}.png`;
