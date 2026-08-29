@@ -328,8 +328,8 @@ function customFrames(key) {
   const stroke = '#f5f5f5';
   const bg = '#1a1010';
   const svg = (body) => `<svg viewBox="0 0 200 220" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-    <rect width="200" height="220" fill="${bg}"/>
-    <g fill="none" stroke="${stroke}" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">${body}</g>
+    <rect width="200" height="220" fill="transparent"/>
+    <g fill="none" stroke="${stroke}" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round">${body}</g>
   </svg>`;
   const head = (x, y) => `<circle cx="${x}" cy="${y}" r="14"/>`;
 
@@ -496,9 +496,9 @@ function wgDemoHtml(name, opts = {}) {
     </div>`).join('');
   return `<div class="wg-demo" data-wg="${safeSlug}" role="img" aria-label="Form guide for ${name}">
     <div class="wg-stage wg-stage-hero">
-      <img class="wg-frame f1" src="${wgFrameUrl(safeSlug, 1)}" alt="" decoding="async" />
-      <img class="wg-frame f2" src="${wgFrameUrl(safeSlug, 2)}" alt="" decoding="async" />
-      <img class="wg-frame f3" src="${wgFrameUrl(safeSlug, 3)}" alt="" decoding="async" />
+      <img class="wg-frame f1" src="${wgFrameUrl(safeSlug, 1)}" alt="" decoding="async" onerror="this.onerror=null;this.src='${wgFrameUrl('bodyweight-squat', 1)}'" />
+      <img class="wg-frame f2" src="${wgFrameUrl(safeSlug, 2)}" alt="" decoding="async" onerror="this.onerror=null;this.src='${wgFrameUrl('bodyweight-squat', 2)}'" />
+      <img class="wg-frame f3" src="${wgFrameUrl(safeSlug, 3)}" alt="" decoding="async" onerror="this.onerror=null;this.src='${wgFrameUrl('bodyweight-squat', 3)}'" />
       <div class="wg-glow"></div>
     </div>
     <div class="wg-strip" aria-hidden="true">${strip}</div>
