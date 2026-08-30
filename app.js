@@ -172,7 +172,12 @@ function formStepsHtml(name) {
 }
 
 // Workout Guide (CC BY-SA 4.0) — polished 3-frame form demos
-const WG_CDN = 'https://cdn.jsdelivr.net/npm/@bryllim/workout-guide@1.0.0/assets';
+const WG_CDN_BASES = [
+  'https://cdn.jsdelivr.net/npm/@bryllim/workout-guide@1.0.0/assets',
+  'https://fastly.jsdelivr.net/npm/@bryllim/workout-guide@1.0.0/assets',
+  'https://unpkg.com/@bryllim/workout-guide@1.0.0/assets'
+];
+const WG_CDN = WG_CDN_BASES[0];
 
 const EXERCISE_GUIDE = {
   "Air Squats": { type: "cdn", key: "bodyweight-squat" },
@@ -331,11 +336,27 @@ function wgSlug(name) {
   return 'bodyweight-squat';
 }
 
-function wgFrameUrl(slug, frame) {
-  return `${WG_CDN}/${slug}/frame-${frame}.png`;
+function wgFrameUrl(slug, frame, baseIndex) {
+  const base = WG_CDN_BASES[(baseIndex || 0) % WG_CDN_BASES.length];
+  return `${base}/${slug}/frame-${frame}.png`;
 }
 
-/** In-memory URL set so we only hit network once per frame per session */
+/** Tiny inline SVG placeholder if all CDNs fail — never show broken-image icon */
+function wgPlaceholderDataUri() {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 220" width="200" height="220">
+    <rect width="200" height="220" fill="#0c0a0a"/>
+    <g fill="none" stroke="#f5f5f5" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="100" cy="48" r="16"/>
+      <path d="M100 64 V120"/>
+      <path d="M100 78 L62 112"/>
+      <path d="M100 78 L138 112"/>
+      <path d="M100 120 L82 190"/>
+      <path d="M100 120 L118 190"/>
+    </g>
+  </svg>`;
+  return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+}
+
 const _wgPreloaded = new Set();
 
 function resolveGuideSlug(name) {
@@ -345,30 +366,21 @@ function resolveGuideSlug(name) {
     'walking','running','standing-calf-raise','calf-raise','dumbbell-side-bend',
     'band-pull-apart','active-hang','dead-hang','seated-calf-raise'
   ]);
-  if (!slug || banned.has(slug)) slug = 'high-knees';
+  if (!slug || banned.has(slug)) slug = 'bodyweight-squat';
   return slug;
 }
 
-/** Preload 3 frames for a slug (browser + HTTP cache). Idempotent. */
 function preloadGuideSlug(slug) {
   if (!slug) return;
   for (let n = 1; n <= 3; n++) {
-    const url = wgFrameUrl(slug, n);
+    const url = wgFrameUrl(slug, n, 0);
     if (_wgPreloaded.has(url)) continue;
     _wgPreloaded.add(url);
     const img = new Image();
     img.decoding = 'async';
+    img.referrerPolicy = 'no-referrer';
     img.src = url;
   }
-}
-
-/** Preload current + next N exercises in an active workout */
-
-function preloadPopularGuides() {
-  try {
-    const free = Object.values(WORKOUTS).filter((w) => w.free).slice(0, 4);
-    free.forEach((w) => preloadWorkoutGuides(w, 0, 2));
-  } catch (_) {}
 }
 
 function preloadWorkoutGuides(workout, fromIndex, ahead) {
@@ -379,6 +391,22 @@ function preloadWorkoutGuides(workout, fromIndex, ahead) {
     preloadGuideSlug(resolveGuideSlug(workout.exercises[i].name));
   }
 }
+
+/** img onerror: try next CDN base, then placeholder */
+function wgImgError(el, slug, frame) {
+  try {
+    const attempt = parseInt(el.getAttribute('data-cdn') || '0', 10) + 1;
+    if (attempt < WG_CDN_BASES.length) {
+      el.setAttribute('data-cdn', String(attempt));
+      el.src = wgFrameUrl(slug, frame, attempt);
+      return;
+    }
+  } catch (_) {}
+  el.onerror = null;
+  el.src = wgPlaceholderDataUri();
+  el.classList.add('wg-fallback');
+}
+
 
 
 
@@ -411,31 +439,34 @@ function prDemoHtml(name) { return null; }
 function wgDemoHtml(name, opts = {}) {
   const slug = resolveGuideSlug(name);
   preloadGuideSlug(slug);
-
   const labels = ['Setup', 'Move', 'Finish'];
-  const frame = (n, extra) =>
-    `<img class="wg-frame f${n}" src="${wgFrameUrl(slug, n)}" alt="" decoding="async" width="320" height="320"
-      ${extra || ''}
-      onerror="this.onerror=null;this.src='${wgFrameUrl('bodyweight-squat', n)}'" />`;
+  // onerror calls global wgImgError — multi-CDN then SVG placeholder
+  const frame = (n, extraCls, extraAttr) =>
+    `<img class="wg-frame f${n}${extraCls ? ' ' + extraCls : ''}" data-cdn="0" data-slug="${slug}" data-frame="${n}"
+      src="${wgFrameUrl(slug, n, 0)}" alt="" decoding="async" width="320" height="320"
+      referrerpolicy="no-referrer" crossorigin="anonymous"
+      ${extraAttr || ''}
+      onerror="wgImgError(this,'${slug}',${n})" />`;
 
   const strip = [1, 2, 3].map((n) => `
     <div class="wg-cell">
       <div class="wg-cell-frame">
-        <img src="${wgFrameUrl(slug, n)}" alt="${labels[n - 1]}" decoding="async" loading="lazy" width="96" height="96"
-          onerror="this.onerror=null;this.src='${wgFrameUrl('bodyweight-squat', n)}'" />
+        <img data-cdn="0" src="${wgFrameUrl(slug, n, 0)}" alt="${labels[n - 1]}" decoding="async"
+          width="96" height="96" referrerpolicy="no-referrer" crossorigin="anonymous"
+          onerror="wgImgError(this,'${slug}',${n})" />
       </div>
       <span class="wg-label">${labels[n - 1]}</span>
     </div>`).join('');
 
   return `<div class="wg-demo" data-wg="${slug}" role="img" aria-label="Form guide for ${name}">
     <div class="wg-stage wg-stage-hero">
-      ${frame(1, 'fetchpriority="high"')}
-      ${frame(2, '')}
-      ${frame(3, '')}
+      ${frame(1, '', 'fetchpriority="high"')}
+      ${frame(2, '', '')}
+      ${frame(3, '', '')}
       <div class="wg-glow"></div>
     </div>
     <div class="wg-strip" aria-hidden="true">${strip}</div>
-    <p class="wg-credit">Form guide · Setup → Move → Finish</p>
+    <p class="wg-credit">Form guide · Setup → Move · Finish</p>
   </div>`;
 }
 
@@ -481,8 +512,9 @@ function guideSlugForPreview(name) {
 function iconFor(name) {
   const slug = guideSlugForPreview(name);
   return `<span class="ex-thumb" data-wg="${slug}" aria-hidden="true">
-    <img src="${wgFrameUrl(slug, 2)}" alt="" loading="lazy" decoding="async" width="64" height="64"
-      onerror="this.onerror=null;this.src='${wgFrameUrl('bodyweight-squat', 2)}'" />
+    <img data-cdn="0" src="${wgFrameUrl(slug, 2, 0)}" alt="" loading="lazy" decoding="async" width="64" height="64"
+      referrerpolicy="no-referrer" crossorigin="anonymous"
+      onerror="wgImgError(this,'${slug}',2)" />
   </span>`;
 }
 function iconSvg(name, sizeClass) {
