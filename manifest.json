@@ -1,12 +1,20 @@
 {
   "name": "Vyrn",
   "short_name": "Vyrn",
-  "description": "Show up. Put in the work. Equipment-free training + weekly challenges.",
-  "start_url": "/",
+  "description": "Show up. Put in the work. Equipment-free training for home, office, and outdoors.",
+  "start_url": "/?app=1",
+  "scope": "/",
+  "id": "https://vyrn-fit.github.io/",
   "display": "standalone",
   "background_color": "#0a0a0a",
   "theme_color": "#c41e12",
-  "orientation": "portrait",
+  "orientation": "portrait-primary",
+  "categories": [
+    "health",
+    "fitness",
+    "lifestyle"
+  ],
+  "lang": "en",
   "icons": [
     {
       "src": "/assets/icon.png",
@@ -18,12 +26,20 @@
       "src": "/assets/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
     },
     {
       "src": "/assets/favicon.png",
       "sizes": "32x32",
       "type": "image/png"
     }
-  ]
+  ],
+  "screenshots": [],
+  "prefer_related_applications": false
 }
