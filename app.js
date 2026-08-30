@@ -173,7 +173,8 @@ function formStepsHtml(name) {
 
 // Workout Guide (CC BY-SA 4.0) — polished 3-frame form demos
 const WG_CDN_BASES = [
-  '/assets/wg',  // self-hosted first (offline + no broken CDN)
+  '/assets/wg',
+  '/assets/guides',
   'https://cdn.jsdelivr.net/npm/@bryllim/workout-guide@1.0.0/assets',
   'https://fastly.jsdelivr.net/npm/@bryllim/workout-guide@1.0.0/assets',
   'https://unpkg.com/@bryllim/workout-guide@1.0.0/assets'
@@ -993,7 +994,6 @@ function formatTime(s) {
 }
 function todayKey() { return new Date().toISOString().slice(0, 10); }
 function getHistory() { return store.get('history') || []; }
-
 function getBadges() {
   const stats = getStats();
   const history = getHistory();
@@ -1008,7 +1008,6 @@ function getBadges() {
   if (isSignedIn()) badges.push({ id: 'synced', label: 'Cloud sync', icon: '☁' });
   return badges;
 }
-
 function getStats() {
   const history = getHistory();
   const today = todayKey();
@@ -1551,7 +1550,7 @@ function renderTabBar(active) {
 function renderWelcome() {
   return `<div class="screen center fade-in">
     <img class="brand-logo" src="/assets/logo.png" alt="Vyrn — show up. put in the work" />
-    <p class="muted">Home · Office · Playground — no special gear</p><p class="beta-note">Early beta · email/guest login</p>
+    <p class="muted">Home · Office · Playground — no special gear</p><p class="beta-note">Early beta · email or guest · Pro billing later</p>
     <div class="btn-stack">
       <button class="btn primary" data-go="login">Sign in / Sign up</button>
       <button class="btn ghost" data-action="guest">Continue as Guest</button>
@@ -1607,16 +1606,17 @@ function renderHome() {
     </div>
     <div class="stats mb">
       <div class="stat"><div class="num">${stats.today}</div><div class="lbl">Today</div></div>
-      <div class="stat"><div class="num">${stats.streak}</div><div class="lbl">Streak</div></div>
-      <div class="stat"><div class="num">${stats.total}</div><div class="lbl">All-time</div></div>
-    </div>
     <div class="card mb" style="padding:12px 14px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
         <span style="font-size:13px;font-weight:600">Weekly goal</span>
         <span class="muted" style="font-size:12px">${stats.weekCount}/${stats.weekGoal} sessions</span>
       </div>
-      <div class="goal-bar"><div class="goal-fill" style="width:${stats.weekPct}%"></div></div>
-      <p class="muted" style="font-size:12px;margin-top:8px">${stats.weekCount >= stats.weekGoal ? 'Weekly goal hit — keep the streak going.' : (stats.weekGoal - stats.weekCount) + ' to go this week.'}</p>
+      <div style="height:6px;background:#1f1f1f;border-radius:99px;overflow:hidden">
+        <div style="height:100%;width:${stats.weekPct}%;background:linear-gradient(90deg,#ff3b2f,#ff6b35);border-radius:99px"></div>
+      </div>
+    </div>
+      <div class="stat"><div class="num">${stats.streak}</div><div class="lbl">Streak</div></div>
+      <div class="stat"><div class="num">${stats.total}</div><div class="lbl">All-time</div></div>
     </div>
     <div class="card">
       <h3>Quick start</h3>
@@ -2033,7 +2033,7 @@ function renderProfile() {
     </div>
     <button class="btn ghost mt" data-go="challenge">Weekly Challenge</button>
     <button class="btn ghost" data-action="signout">Sign Out</button>
-    ${(getBadges().length ? `<div class="card mb"><h3>Badges</h3><div class="badge-row">${getBadges().map(b => `<span class="badge-pill" title="${b.label}"><span class="badge-ico">${b.icon}</span>${b.label}</span>`).join('')}</div></div>` : '')}
+    ${(getBadges().length ? `<div class="card mb"><h3>Badges</h3><div class="badge-row">${getBadges().map(b => `<span class="badge-pill"><span class="badge-ico">${b.icon}</span>${b.label}</span>`).join('')}</div></div>` : '')}
     ${renderLegalFooter()}
     ${renderTabBar('profile')}
   </div>`;
@@ -2249,9 +2249,13 @@ async function handleAction(action, el) {
     return;
   }
   if (action === 'upgrade') {
-    isPro = true;
-    store.set('isPro', true);
-    alert('Pro unlocked for this device (beta). Real billing comes later — enjoy the full library.');
+    isPro = true; store.set('isPro', true);
+    if (isSignedIn()) {
+      try {
+        await supabaseClient.from('profiles').update({ is_pro: true, updated_at: new Date().toISOString() }).eq('id', currentUser.id);
+      } catch (_) {}
+    }
+    alert('Pro unlocked on this account (beta — billing not charged yet).');
     render();
     return;
   }
