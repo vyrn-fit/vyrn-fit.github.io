@@ -35,24 +35,28 @@ const store = {
 // Exercise photos (free stock — Unsplash / Pexels)
 function photoKey(name) {
   const n = (name || '').toLowerCase();
-  // Workout titles first
-  if (/office|desk|posture|afternoon energy/.test(n)) return 'office';
-  if (/playground|park power/.test(n)) return 'park';
-  if (/full body|morning|wake|hotel|travel|micro/.test(n)) return 'home';
-  if (/core focus|core/.test(n)) return 'core';
-  if (/mobility|stretch|yoga/.test(n)) return 'stretch';
-  if (/hiit|express|legs|upper|strength/.test(n)) return 'strength';
-  // Exercise names
-  if (/chair|seated|wall sit|neck|chin|thoracic|shoulder blade/.test(n)) return 'office';
-  if (/squat|sumo|pulse/.test(n)) return 'squat';
-  if (/push|dip|pike|diamond|incline/.test(n)) return 'pushup';
+  // Specific exercises first (avoid office catch-all for chair/wall)
+  if (/wall sit/.test(n)) return 'office';
+  if (/sit-?to-?stand|chair stand|desk chair|bench sit/.test(n)) return 'squat';
+  if (/wall push|push|dip|pike|diamond|incline/.test(n)) return 'pushup';
+  if (/squat|sumo|pulse|air squat/.test(n)) return 'squat';
   if (/plank|hollow|dead bug|bird|shoulder tap/.test(n)) return 'plank';
   if (/lunge|step-up|step up/.test(n)) return 'lunge';
   if (/jog|run|march|high knee|walk|sprint|perimeter/.test(n)) return 'run';
-  if (/open|roll|fold|circle|breath|hamstring|ankle|hip|cool|toe reach|arm circle|side bend/.test(n)) return 'stretch';
+  if (/calf/.test(n)) return 'strength';
   if (/bridge|superman|tabletop|glute/.test(n)) return 'core';
   if (/jump|burpee|jack|climber|broad/.test(n)) return 'jump';
-  if (/bench|hang|bar/.test(n)) return 'park';
+  if (/chin tuck|neck|shoulder roll|shoulder blade|scap|thoracic|seated cat|chest opener|arm circle|hip circle|ankle|side bend/.test(n)) return 'stretch';
+  if (/seated torso|russian/.test(n)) return 'core';
+  if (/hang|bench step|park/.test(n)) return 'park';
+  if (/open|roll|fold|circle|breath|hamstring|hip flexor|cool|toe reach|stretch/.test(n)) return 'stretch';
+  // Workout titles
+  if (/office|desk|posture|afternoon energy/.test(n)) return 'office';
+  if (/playground|park power/.test(n)) return 'park';
+  if (/full body|morning|wake|hotel|travel|micro/.test(n)) return 'home';
+  if (/core focus|\bcore\b/.test(n)) return 'core';
+  if (/mobility|yoga/.test(n)) return 'stretch';
+  if (/hiit|express|legs|upper|strength/.test(n)) return 'strength';
   return 'default';
 }
 
@@ -104,6 +108,11 @@ const FORM_GUIDE = {
     steps: ['Feet forward, back against wall', 'Slide down to ~90° if able', 'Hold; knees track over toes'],
     avoid: 'Knees past toes'
   },
+  sitstand: {
+    focus: 'Stand tall · sit with control',
+    steps: ['Feet flat, sit near the edge of the chair', 'Drive through heels to stand fully', 'Sit back down with control — no plop'],
+    avoid: 'Using momentum or only the toes'
+  },
   park: {
     focus: 'Control the step',
     steps: ['Whole foot on the step', 'Drive through heel to stand', 'Step down with control'],
@@ -142,6 +151,9 @@ const FORM_GUIDE = {
 };
 
 function formGuideFor(name) {
+  const n = (name || '').toLowerCase();
+  if (/sit-?to-?stand|chair stand|desk chair|bench sit/.test(n)) return FORM_GUIDE.sitstand || FORM_GUIDE.squat;
+  if (/wall sit/.test(n)) return FORM_GUIDE.office;
   return FORM_GUIDE[photoKey(name)] || FORM_GUIDE.default;
 }
 function formTipFor(name) {
@@ -167,11 +179,11 @@ const EXERCISE_GUIDE = {
   "Ankle rocks": { type: "custom", key: "ankle" },
   "Arm circles": { type: "custom", key: "arm_circle" },
   "Bench dips": { type: "cdn", key: "chair-dip" },
-  "Bench sit-to-stand": { type: "custom", key: "sit_stand" },
+  "Bench sit-to-stand": { type: "cdn", key: "bodyweight-squat" },
   "Bench step-ups": { type: "cdn", key: "step-up" },
   "Bird dog": { type: "cdn", key: "bird-dog" },
   "Bodyweight squats": { type: "cdn", key: "bodyweight-squat" },
-  "Broad jumps (or long steps)": { type: "custom", key: "broad_jump" },
+  "Broad jumps (or long steps)": { type: "cdn", key: "jump-squat" },
   "Burpees": { type: "cdn", key: "burpee" },
   "Calf raises": { type: "custom", key: "calf" },
   "Calf raises on curb": { type: "custom", key: "calf" },
@@ -181,8 +193,8 @@ const EXERCISE_GUIDE = {
   "Cool-down walk in place": { type: "custom", key: "walk_place" },
   "Dead bugs": { type: "cdn", key: "dead-bug" },
   "Dead hangs or scap pulls": { type: "custom", key: "scap_squeeze" },
-  "Deep squat hold": { type: "custom", key: "squat_hold" },
-  "Desk chair sit-to-stand": { type: "custom", key: "sit_stand" },
+  "Deep squat hold": { type: "cdn", key: "bodyweight-squat" },
+  "Desk chair sit-to-stand": { type: "cdn", key: "bodyweight-squat" },
   "Diamond or narrow push-ups": { type: "cdn", key: "diamond-push-up" },
   "Easy breathing stretch": { type: "cdn", key: "worlds-greatest-stretch" },
   "Easy jog / walk lap": { type: "custom", key: "walk_place" },
@@ -200,15 +212,15 @@ const EXERCISE_GUIDE = {
   "Hip flexor stretch R": { type: "cdn", key: "kneeling-hip-flexor-stretch" },
   "Hollow hold (or tuck)": { type: "cdn", key: "hollow-body-hold" },
   "Incline or knee push-ups": { type: "cdn", key: "knee-push-up" },
-  "Incline push-ups": { type: "custom", key: "incline_push" },
-  "Incline push-ups (bench)": { type: "custom", key: "incline_push" },
-  "Incline push-ups (desk/bed)": { type: "custom", key: "incline_push" },
+  "Incline push-ups": { type: "cdn", key: "knee-push-up" },
+  "Incline push-ups (bench)": { type: "cdn", key: "knee-push-up" },
+  "Incline push-ups (desk/bed)": { type: "cdn", key: "knee-push-up" },
   "Jump squats (or squats)": { type: "cdn", key: "jump-squat" },
   "Jumping jacks": { type: "cdn", key: "jumping-jack" },
   "Jumping jacks (or step-jacks)": { type: "cdn", key: "jumping-jack" },
   "Lunges": { type: "cdn", key: "reverse-lunge" },
-  "March in place": { type: "custom", key: "march" },
-  "March or jog in place": { type: "custom", key: "march" },
+  "March in place": { type: "cdn", key: "high-knees" },
+  "March or jog in place": { type: "cdn", key: "high-knees" },
   "Mountain Climbers": { type: "cdn", key: "mountain-climber" },
   "Mountain climbers": { type: "cdn", key: "mountain-climber" },
   "Neck & shoulder rolls": { type: "custom", key: "neck_shoulder" },
@@ -221,7 +233,7 @@ const EXERCISE_GUIDE = {
   "Push-ups (knee OK)": { type: "cdn", key: "knee-push-up" },
   "Push-ups or wall push-ups": { type: "cdn", key: "wall-push-up" },
   "Reverse lunges": { type: "cdn", key: "reverse-lunge" },
-  "Reverse tabletop holds": { type: "custom", key: "tabletop" },
+  "Reverse tabletop holds": { type: "cdn", key: "glute-bridge" },
   "Seated cat-cow": { type: "cdn", key: "cat-cow-stretch" },
   "Seated thoracic openers": { type: "custom", key: "thoracic" },
   "Seated torso twists": { type: "custom", key: "seated_twist" },
@@ -230,21 +242,21 @@ const EXERCISE_GUIDE = {
   "Shoulder taps in plank": { type: "cdn", key: "plank-shoulder-tap" },
   "Side plank (left)": { type: "cdn", key: "side-plank" },
   "Side plank (right)": { type: "cdn", key: "side-plank" },
-  "Single-leg glute bridge L": { type: "custom", key: "single_glute" },
-  "Single-leg glute bridge R": { type: "custom", key: "single_glute" },
+  "Single-leg glute bridge L": { type: "cdn", key: "glute-bridge" },
+  "Single-leg glute bridge R": { type: "cdn", key: "glute-bridge" },
   "Slow mountain climbers": { type: "cdn", key: "mountain-climber" },
   "Slow neck rolls": { type: "custom", key: "neck_shoulder" },
   "Sprint or fast walk intervals": { type: "custom", key: "walk_place" },
   "Squat jumps (or squats)": { type: "cdn", key: "jump-squat" },
-  "Squat pulses": { type: "custom", key: "squat_pulse" },
+  "Squat pulses": { type: "cdn", key: "bodyweight-squat" },
   "Squats": { type: "cdn", key: "bodyweight-squat" },
   "Standing chest opener": { type: "custom", key: "chest_open" },
   "Standing hip circles": { type: "custom", key: "hip_circle" },
-  "Standing marches": { type: "custom", key: "march" },
+  "Standing marches": { type: "cdn", key: "high-knees" },
   "Standing side bends": { type: "custom", key: "side_bend" },
   "Standing toe reaches": { type: "cdn", key: "toe-touch" },
   "Stretch & breathe": { type: "cdn", key: "worlds-greatest-stretch" },
-  "Sumo squats": { type: "custom", key: "sumo_squat" },
+  "Sumo squats": { type: "cdn", key: "bodyweight-squat" },
   "Superman holds": { type: "cdn", key: "superman" },
   "Thoracic rotations": { type: "custom", key: "thoracic" },
   "Walk the perimeter": { type: "custom", key: "walk_place" },
@@ -326,131 +338,96 @@ function wgFrameUrl(slug, frame) {
 /** Equipment-free SVG silhouettes — Setup / Move / Finish */
 function customFrames(key) {
   const stroke = '#f5f5f5';
-  const bg = '#1a1010';
-  const svg = (body) => `<svg viewBox="0 0 200 220" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+  // Richer figure: head + torso oval + limbs (less "stick man")
+  const svg = (parts) => `<svg viewBox="0 0 200 220" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
     <rect width="200" height="220" fill="transparent"/>
-    <g fill="none" stroke="${stroke}" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round">${body}</g>
+    <g fill="none" stroke="${stroke}" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">${parts}</g>
   </svg>`;
-  const head = (x, y) => `<circle cx="${x}" cy="${y}" r="14"/>`;
+  const head = (x, y, r=16) => `<circle cx="${x}" cy="${y}" r="${r}"/>`;
+  const torso = (x1,y1,x2,y2) => `<path d="M${x1} ${y1} L${x2} ${y2}"/>`;
 
   const frames = {
-    march: [
-      svg(`${head(100,42)}<path d="M100 56 V120"/><path d="M100 70 L70 110"/><path d="M100 70 L130 110"/><path d="M100 120 L80 190"/><path d="M100 120 L120 190"/>`),
-      svg(`${head(100,42)}<path d="M100 56 V118"/><path d="M100 70 L72 100"/><path d="M100 70 L128 95"/><path d="M100 118 L78 190"/><path d="M100 118 L130 150 L145 125"/>`),
-      svg(`${head(100,42)}<path d="M100 56 V118"/><path d="M100 70 L72 95"/><path d="M100 70 L128 100"/><path d="M100 118 L70 150 L55 125"/><path d="M100 118 L122 190"/>`)
-    ],
+    // Calf raise — rise onto toes (no machine)
     calf: [
-      svg(`${head(100,40)}<path d="M100 54 V125"/><path d="M100 70 L68 115"/><path d="M100 70 L132 115"/><path d="M100 125 L82 195"/><path d="M100 125 L118 195"/><path d="M70 198 H130"/>`),
-      svg(`${head(100,28)}<path d="M100 42 V112"/><path d="M100 58 L68 100"/><path d="M100 58 L132 100"/><path d="M100 112 L84 175"/><path d="M100 112 L116 175"/><path d="M78 178 L84 175 L90 178"/><path d="M110 178 L116 175 L122 178"/>`),
-      svg(`${head(100,40)}<path d="M100 54 V125"/><path d="M100 70 L68 115"/><path d="M100 70 L132 115"/><path d="M100 125 L82 195"/><path d="M100 125 L118 195"/><path d="M70 198 H130"/>`)
+      svg(`${head(100,38)}<path d="M100 54 V118"/><path d="M100 72 L62 108"/><path d="M100 72 L138 108"/><path d="M100 118 L84 188"/><path d="M100 118 L116 188"/><line x1="70" y1="192" x2="130" y2="192"/>`),
+      svg(`${head(100,26)}<path d="M100 42 V106"/><path d="M100 60 L62 96"/><path d="M100 60 L138 96"/><path d="M100 106 L86 168"/><path d="M100 106 L114 168"/><path d="M80 172 L86 168 L92 172"/><path d="M108 172 L114 168 L120 172"/>`),
+      svg(`${head(100,38)}<path d="M100 54 V118"/><path d="M100 72 L62 108"/><path d="M100 72 L138 108"/><path d="M100 118 L84 188"/><path d="M100 118 L116 188"/><line x1="70" y1="192" x2="130" y2="192"/>`)
     ],
     neck_shoulder: [
-      svg(`${head(100,48)}<path d="M100 62 V120"/><path d="M100 75 L65 105"/><path d="M100 75 L135 105"/><path d="M100 120 L82 195"/><path d="M100 120 L118 195"/>`),
-      svg(`${head(112,44)}<path d="M100 62 V120"/><path d="M100 72 L62 88"/><path d="M100 72 L138 88"/><path d="M100 120 L82 195"/><path d="M100 120 L118 195"/>`),
-      svg(`${head(100,48)}<path d="M100 62 V120"/><path d="M100 78 L55 100"/><path d="M100 78 L145 100"/><path d="M100 120 L82 195"/><path d="M100 120 L118 195"/>`)
+      svg(`${head(100,46)}<path d="M100 62 V118"/><path d="M100 78 L58 108"/><path d="M100 78 L142 108"/><path d="M100 118 L84 190"/><path d="M100 118 L116 190"/>`),
+      svg(`${head(114,42)}<path d="M100 62 V118"/><path d="M100 74 L55 90"/><path d="M100 74 L145 90"/><path d="M100 118 L84 190"/><path d="M100 118 L116 190"/>`),
+      svg(`${head(100,46)}<path d="M100 62 V118"/><path d="M100 80 L50 102"/><path d="M100 80 L150 102"/><path d="M100 118 L84 190"/><path d="M100 118 L116 190"/>`)
     ],
     chin_tuck: [
-      svg(`${head(100,48)}<path d="M100 62 V120"/><path d="M100 75 L70 110"/><path d="M100 75 L130 110"/><path d="M100 120 L82 195"/><path d="M100 120 L118 195"/>`),
-      svg(`${head(92,50)}<path d="M100 62 V120"/><path d="M100 75 L70 110"/><path d="M100 75 L130 110"/><path d="M100 120 L82 195"/><path d="M100 120 L118 195"/><path d="M78 48 H92"/>`),
-      svg(`${head(100,48)}<path d="M100 62 V120"/><path d="M100 75 L70 110"/><path d="M100 75 L130 110"/><path d="M100 120 L82 195"/><path d="M100 120 L118 195"/>`)
+      svg(`${head(100,46)}<path d="M100 62 V118"/><path d="M100 78 L62 112"/><path d="M100 78 L138 112"/><path d="M100 118 L84 190"/><path d="M100 118 L116 190"/>`),
+      svg(`${head(90,48)}<path d="M100 62 V118"/><path d="M100 78 L62 112"/><path d="M100 78 L138 112"/><path d="M100 118 L84 190"/><path d="M100 118 L116 190"/><path d="M72 46 H90"/>`),
+      svg(`${head(100,46)}<path d="M100 62 V118"/><path d="M100 78 L62 112"/><path d="M100 78 L138 112"/><path d="M100 118 L84 190"/><path d="M100 118 L116 190"/>`)
     ],
     hip_circle: [
-      svg(`${head(100,42)}<path d="M100 56 V120"/><path d="M100 70 L70 110"/><path d="M100 70 L130 110"/><path d="M100 120 L80 190"/><path d="M100 120 L120 190"/>`),
-      svg(`${head(100,42)}<path d="M100 56 V118"/><path d="M100 70 L70 110"/><path d="M100 70 L130 100"/><path d="M100 118 L78 190"/><path d="M100 118 L135 155 L150 170"/>`),
-      svg(`${head(100,42)}<path d="M100 56 V118"/><path d="M100 70 L70 100"/><path d="M100 70 L130 110"/><path d="M100 118 L65 155 L50 170"/><path d="M100 118 L122 190"/>`)
+      svg(`${head(100,40)}<path d="M100 56 V118"/><path d="M100 72 L62 110"/><path d="M100 72 L138 110"/><path d="M100 118 L82 190"/><path d="M100 118 L118 190"/>`),
+      svg(`${head(100,40)}<path d="M100 56 V116"/><path d="M100 72 L62 110"/><path d="M100 72 L140 98"/><path d="M100 116 L80 190"/><path d="M100 116 L138 152 L152 168"/>`),
+      svg(`${head(100,40)}<path d="M100 56 V116"/><path d="M100 72 L60 98"/><path d="M100 72 L138 110"/><path d="M100 116 L62 152 L48 168"/><path d="M100 116 L120 190"/>`)
     ],
     ankle: [
-      svg(`${head(100,42)}<path d="M100 56 V125"/><path d="M100 70 L72 112"/><path d="M100 70 L128 112"/><path d="M100 125 L85 195"/><path d="M100 125 L115 195"/><path d="M75 198 H125"/>`),
-      svg(`${head(100,42)}<path d="M100 56 V125"/><path d="M100 70 L72 112"/><path d="M100 70 L128 112"/><path d="M100 125 L85 195"/><path d="M100 125 L120 185 L135 195"/>`),
-      svg(`${head(100,42)}<path d="M100 56 V125"/><path d="M100 70 L72 112"/><path d="M100 70 L128 112"/><path d="M100 125 L80 185 L65 195"/><path d="M100 125 L115 195"/>`)
+      svg(`${head(100,40)}<path d="M100 56 V122"/><path d="M100 72 L64 112"/><path d="M100 72 L136 112"/><path d="M100 122 L86 190"/><path d="M100 122 L114 190"/><line x1="72" y1="194" x2="128" y2="194"/>`),
+      svg(`${head(100,40)}<path d="M100 56 V122"/><path d="M100 72 L64 112"/><path d="M100 72 L136 112"/><path d="M100 122 L86 190"/><path d="M100 122 L122 180 L138 192"/>`),
+      svg(`${head(100,40)}<path d="M100 56 V122"/><path d="M100 72 L64 112"/><path d="M100 72 L136 112"/><path d="M100 122 L78 180 L62 192"/><path d="M100 122 L114 190"/>`)
     ],
     side_bend: [
-      svg(`${head(100,42)}<path d="M100 56 V120"/><path d="M100 70 L70 100"/><path d="M100 70 L130 100"/><path d="M100 120 L82 195"/><path d="M100 120 L118 195"/>`),
-      svg(`${head(118,48)}<path d="M108 60 V120"/><path d="M108 72 L85 55"/><path d="M108 75 L130 115"/><path d="M108 120 L90 195"/><path d="M108 120 L125 195"/>`),
-      svg(`${head(82,48)}<path d="M92 60 V120"/><path d="M92 75 L70 115"/><path d="M92 72 L115 55"/><path d="M92 120 L75 195"/><path d="M92 120 L110 195"/>`)
+      svg(`${head(100,40)}<path d="M100 56 V118"/><path d="M100 72 L64 102"/><path d="M100 72 L136 102"/><path d="M100 118 L84 190"/><path d="M100 118 L116 190"/>`),
+      svg(`${head(120,46)}<path d="M108 60 V118"/><path d="M108 74 L88 52"/><path d="M108 78 L136 118"/><path d="M108 118 L92 190"/><path d="M108 118 L124 190"/>`),
+      svg(`${head(80,46)}<path d="M92 60 V118"/><path d="M92 78 L64 118"/><path d="M92 74 L112 52"/><path d="M92 118 L76 190"/><path d="M92 118 L108 190"/>`)
     ],
     scap_squeeze: [
-      svg(`${head(100,42)}<path d="M100 56 V120"/><path d="M100 72 L55 90"/><path d="M100 72 L145 90"/><path d="M100 120 L82 195"/><path d="M100 120 L118 195"/>`),
-      svg(`${head(100,42)}<path d="M100 56 V120"/><path d="M100 72 L40 85"/><path d="M100 72 L160 85"/><path d="M100 120 L82 195"/><path d="M100 120 L118 195"/>`),
-      svg(`${head(100,42)}<path d="M100 56 V120"/><path d="M100 75 L70 95"/><path d="M100 75 L130 95"/><path d="M100 120 L82 195"/><path d="M100 120 L118 195"/>`)
+      svg(`${head(100,40)}<path d="M100 56 V118"/><path d="M100 74 L48 92"/><path d="M100 74 L152 92"/><path d="M100 118 L84 190"/><path d="M100 118 L116 190"/>`),
+      svg(`${head(100,40)}<path d="M100 56 V118"/><path d="M100 74 L36 86"/><path d="M100 74 L164 86"/><path d="M100 118 L84 190"/><path d="M100 118 L116 190"/>`),
+      svg(`${head(100,40)}<path d="M100 56 V118"/><path d="M100 78 L72 96"/><path d="M100 78 L128 96"/><path d="M100 118 L84 190"/><path d="M100 118 L116 190"/>`)
     ],
     chest_open: [
-      svg(`${head(100,42)}<path d="M100 56 V120"/><path d="M100 72 L70 110"/><path d="M100 72 L130 110"/><path d="M100 120 L82 195"/><path d="M100 120 L118 195"/>`),
-      svg(`${head(100,42)}<path d="M100 56 V120"/><path d="M100 70 L45 70"/><path d="M100 70 L155 70"/><path d="M100 120 L82 195"/><path d="M100 120 L118 195"/>`),
-      svg(`${head(100,42)}<path d="M100 56 V120"/><path d="M100 70 L40 55"/><path d="M100 70 L160 55"/><path d="M100 120 L82 195"/><path d="M100 120 L118 195"/>`)
+      svg(`${head(100,40)}<path d="M100 56 V118"/><path d="M100 74 L64 112"/><path d="M100 74 L136 112"/><path d="M100 118 L84 190"/><path d="M100 118 L116 190"/>`),
+      svg(`${head(100,40)}<path d="M100 56 V118"/><path d="M100 72 L40 72"/><path d="M100 72 L160 72"/><path d="M100 118 L84 190"/><path d="M100 118 L116 190"/>`),
+      svg(`${head(100,40)}<path d="M100 56 V118"/><path d="M100 72 L34 54"/><path d="M100 72 L166 54"/><path d="M100 118 L84 190"/><path d="M100 118 L116 190"/>`)
     ],
     arm_circle: [
-      svg(`${head(100,42)}<path d="M100 56 V120"/><path d="M100 72 L60 120"/><path d="M100 72 L140 120"/><path d="M100 120 L82 195"/><path d="M100 120 L118 195"/>`),
-      svg(`${head(100,42)}<path d="M100 56 V120"/><path d="M100 70 L55 70"/><path d="M100 70 L145 70"/><path d="M100 120 L82 195"/><path d="M100 120 L118 195"/>`),
-      svg(`${head(100,42)}<path d="M100 56 V120"/><path d="M100 72 L70 50"/><path d="M100 72 L130 50"/><path d="M100 120 L82 195"/><path d="M100 120 L118 195"/>`)
+      svg(`${head(100,40)}<path d="M100 56 V118"/><path d="M100 74 L56 122"/><path d="M100 74 L144 122"/><path d="M100 118 L84 190"/><path d="M100 118 L116 190"/>`),
+      svg(`${head(100,40)}<path d="M100 56 V118"/><path d="M100 72 L48 72"/><path d="M100 72 L152 72"/><path d="M100 118 L84 190"/><path d="M100 118 L116 190"/>`),
+      svg(`${head(100,40)}<path d="M100 56 V118"/><path d="M100 74 L64 48"/><path d="M100 74 L136 48"/><path d="M100 118 L84 190"/><path d="M100 118 L116 190"/>`)
     ],
     walk_place: [
-      svg(`${head(100,42)}<path d="M100 56 V118"/><path d="M100 70 L75 105"/><path d="M100 70 L125 105"/><path d="M100 118 L85 190"/><path d="M100 118 L115 190"/>`),
-      svg(`${head(100,42)}<path d="M100 56 V118"/><path d="M100 70 L72 100"/><path d="M100 70 L128 108"/><path d="M100 118 L80 190"/><path d="M100 118 L125 165 L130 190"/>`),
-      svg(`${head(100,42)}<path d="M100 56 V118"/><path d="M100 70 L72 108"/><path d="M100 70 L128 100"/><path d="M100 118 L75 165 L70 190"/><path d="M100 118 L120 190"/>`)
+      svg(`${head(100,40)}<path d="M100 56 V116"/><path d="M100 72 L70 108"/><path d="M100 72 L130 108"/><path d="M100 116 L86 190"/><path d="M100 116 L114 190"/>`),
+      svg(`${head(100,40)}<path d="M100 56 V116"/><path d="M100 72 L66 100"/><path d="M100 72 L132 110"/><path d="M100 116 L80 190"/><path d="M100 116 L128 164 L134 190"/>`),
+      svg(`${head(100,40)}<path d="M100 56 V116"/><path d="M100 72 L68 110"/><path d="M100 72 L134 100"/><path d="M100 116 L72 164 L66 190"/><path d="M100 116 L120 190"/>`)
     ],
     seated_twist: [
-      svg(`${head(100,50)}<path d="M100 64 V110"/><path d="M100 78 L70 100"/><path d="M100 78 L130 100"/><path d="M70 140 H130"/><path d="M85 140 V195"/><path d="M115 140 V195"/>`),
-      svg(`${head(115,52)}<path d="M105 66 V110"/><path d="M105 80 L125 70"/><path d="M105 80 L90 105"/><path d="M70 140 H130"/><path d="M85 140 V195"/><path d="M115 140 V195"/>`),
-      svg(`${head(85,52)}<path d="M95 66 V110"/><path d="M95 80 L75 70"/><path d="M95 80 L110 105"/><path d="M70 140 H130"/><path d="M85 140 V195"/><path d="M115 140 V195"/>`)
+      svg(`${head(100,48)}<path d="M100 64 V108"/><path d="M100 80 L66 102"/><path d="M100 80 L134 102"/><path d="M68 138 H132"/><path d="M84 138 V192"/><path d="M116 138 V192"/>`),
+      svg(`${head(116,50)}<path d="M106 66 V108"/><path d="M106 82 L128 68"/><path d="M106 82 L90 106"/><path d="M68 138 H132"/><path d="M84 138 V192"/><path d="M116 138 V192"/>`),
+      svg(`${head(84,50)}<path d="M94 66 V108"/><path d="M94 82 L72 68"/><path d="M94 82 L110 106"/><path d="M68 138 H132"/><path d="M84 138 V192"/><path d="M116 138 V192"/>`)
     ],
     thoracic: [
-      svg(`${head(100,48)}<path d="M100 62 V120"/><path d="M100 75 L65 100"/><path d="M100 75 L135 100"/><path d="M100 120 L82 195"/><path d="M100 120 L118 195"/>`),
-      svg(`${head(100,48)}<path d="M100 62 V120"/><path d="M100 72 L50 80"/><path d="M100 78 L130 110"/><path d="M100 120 L82 195"/><path d="M100 120 L118 195"/>`),
-      svg(`${head(100,48)}<path d="M100 62 V120"/><path d="M100 78 L70 110"/><path d="M100 72 L150 80"/><path d="M100 120 L82 195"/><path d="M100 120 L118 195"/>`)
+      svg(`${head(100,46)}<path d="M100 62 V118"/><path d="M100 78 L58 104"/><path d="M100 78 L142 104"/><path d="M100 118 L84 190"/><path d="M100 118 L116 190"/>`),
+      svg(`${head(100,46)}<path d="M100 62 V118"/><path d="M100 74 L42 82"/><path d="M100 80 L134 112"/><path d="M100 118 L84 190"/><path d="M100 118 L116 190"/>`),
+      svg(`${head(100,46)}<path d="M100 62 V118"/><path d="M100 80 L66 112"/><path d="M100 74 L158 82"/><path d="M100 118 L84 190"/><path d="M100 118 L116 190"/>`)
     ],
     hang_alt: [
-      svg(`${head(100,70)}<path d="M100 84 V130"/><path d="M100 95 L70 130"/><path d="M100 95 L130 130"/><path d="M100 130 L82 195"/><path d="M100 130 L118 195"/>`),
-      svg(`${head(100,55)}<path d="M100 69 V125"/><path d="M100 80 L55 55"/><path d="M100 80 L145 55"/><path d="M100 125 L82 195"/><path d="M100 125 L118 195"/>`),
-      svg(`${head(100,50)}<path d="M100 64 V120"/><path d="M100 75 L50 40"/><path d="M100 75 L150 40"/><path d="M100 120 L82 195"/><path d="M100 120 L118 195"/>`)
+      svg(`${head(100,68)}<path d="M100 84 V128"/><path d="M100 96 L66 128"/><path d="M100 96 L134 128"/><path d="M100 128 L84 190"/><path d="M100 128 L116 190"/>`),
+      svg(`${head(100,52)}<path d="M100 68 V122"/><path d="M100 80 L48 52"/><path d="M100 80 L152 52"/><path d="M100 122 L84 190"/><path d="M100 122 L116 190"/>`),
+      svg(`${head(100,46)}<path d="M100 62 V118"/><path d="M100 74 L42 36"/><path d="M100 74 L158 36"/><path d="M100 118 L84 190"/><path d="M100 118 L116 190"/>`)
+    ],
+    // fallbacks still available if referenced
+    march: [
+      svg(`${head(100,40)}<path d="M100 56 V118"/><path d="M100 72 L62 110"/><path d="M100 72 L138 110"/><path d="M100 118 L80 190"/><path d="M100 118 L120 190"/>`),
+      svg(`${head(100,40)}<path d="M100 56 V116"/><path d="M100 72 L64 100"/><path d="M100 72 L136 96"/><path d="M100 116 L78 190"/><path d="M100 116 L132 148 L148 122"/>`),
+      svg(`${head(100,40)}<path d="M100 56 V116"/><path d="M100 72 L64 96"/><path d="M100 72 L136 100"/><path d="M100 116 L68 148 L52 122"/><path d="M100 116 L122 190"/>`)
     ],
     sit_stand: [
-      // stand
-      svg(`${head(100,40)}<path d="M100 54 V120"/><path d="M100 70 L70 110"/><path d="M100 70 L130 110"/><path d="M100 120 L82 195"/><path d="M100 120 L118 195"/><path d="M55 155 H145" opacity="0.35"/>`),
-      // sit (hips back toward seat line)
-      svg(`${head(100,55)}<path d="M100 69 V125"/><path d="M100 85 L72 120"/><path d="M100 85 L128 120"/><path d="M100 125 L75 155"/><path d="M100 125 L125 155"/><path d="M70 155 H130"/><path d="M75 155 V195"/><path d="M125 155 V195"/>`),
-      // stand tall
-      svg(`${head(100,40)}<path d="M100 54 V120"/><path d="M100 70 L70 110"/><path d="M100 70 L130 110"/><path d="M100 120 L82 195"/><path d="M100 120 L118 195"/>`)
-    ],
-    squat_hold: [
-      svg(`${head(100,40)}<path d="M100 54 V120"/><path d="M100 70 L70 110"/><path d="M100 70 L130 110"/><path d="M100 120 L82 195"/><path d="M100 120 L118 195"/>`),
-      svg(`${head(100,70)}<path d="M100 84 V130"/><path d="M100 100 L70 125"/><path d="M100 100 L130 125"/><path d="M100 130 L75 175"/><path d="M100 130 L125 175"/><path d="M70 178 H130"/>`),
-      svg(`${head(100,70)}<path d="M100 84 V130"/><path d="M100 100 L70 125"/><path d="M100 100 L130 125"/><path d="M100 130 L75 175"/><path d="M100 130 L125 175"/><path d="M70 178 H130"/>`)
-    ],
-    squat_pulse: [
-      svg(`${head(100,55)}<path d="M100 69 V125"/><path d="M100 85 L72 118"/><path d="M100 85 L128 118"/><path d="M100 125 L78 175"/><path d="M100 125 L122 175"/>`),
-      svg(`${head(100,65)}<path d="M100 79 V132"/><path d="M100 95 L70 125"/><path d="M100 95 L130 125"/><path d="M100 132 L76 178"/><path d="M100 132 L124 178"/>`),
-      svg(`${head(100,55)}<path d="M100 69 V125"/><path d="M100 85 L72 118"/><path d="M100 85 L128 118"/><path d="M100 125 L78 175"/><path d="M100 125 L122 175"/>`)
-    ],
-    sumo_squat: [
-      svg(`${head(100,40)}<path d="M100 54 V120"/><path d="M100 70 L65 105"/><path d="M100 70 L135 105"/><path d="M100 120 L70 195"/><path d="M100 120 L130 195"/>`),
-      svg(`${head(100,65)}<path d="M100 79 V130"/><path d="M100 95 L60 120"/><path d="M100 95 L140 120"/><path d="M100 130 L65 185"/><path d="M100 130 L135 185"/>`),
-      svg(`${head(100,40)}<path d="M100 54 V120"/><path d="M100 70 L65 105"/><path d="M100 70 L135 105"/><path d="M100 120 L70 195"/><path d="M100 120 L130 195"/>`)
-    ],
-    broad_jump: [
-      svg(`${head(90,50)}<path d="M90 64 V120"/><path d="M90 80 L65 110"/><path d="M90 80 L115 110"/><path d="M90 120 L75 185"/><path d="M90 120 L110 185"/>`),
-      svg(`${head(110,35)}<path d="M110 49 V95"/><path d="M110 65 L85 55"/><path d="M110 65 L140 55"/><path d="M110 95 L95 140"/><path d="M110 95 L130 140"/>`),
-      svg(`${head(130,50)}<path d="M130 64 V120"/><path d="M130 80 L105 110"/><path d="M130 80 L155 110"/><path d="M130 120 L115 185"/><path d="M130 120 L150 185"/>`)
-    ],
-    single_glute: [
-      svg(`${head(60,150)}<path d="M70 145 H140"/><path d="M80 145 V90"/><path d="M80 100 L55 80"/><path d="M140 145 L160 100"/><path d="M80 90 L100 70"/>`),
-      svg(`${head(60,140)}<path d="M70 145 H140"/><path d="M80 145 V75"/><path d="M80 90 L50 70"/><path d="M140 145 L165 85"/><path d="M80 75 L100 55"/>`),
-      svg(`${head(60,150)}<path d="M70 145 H140"/><path d="M80 145 V90"/><path d="M80 100 L55 80"/><path d="M140 145 L160 100"/><path d="M80 90 L100 70"/>`)
-    ],
-    tabletop: [
-      svg(`${head(55,70)}<path d="M70 90 H140"/><path d="M70 90 V150"/><path d="M140 90 V150"/><path d="M70 150 H140"/><path d="M55 70 L70 90"/><path d="M150 70 L140 90"/>`),
-      svg(`${head(55,60)}<path d="M70 80 H140"/><path d="M70 80 V145"/><path d="M140 80 V145"/><path d="M70 145 H140"/><path d="M55 60 L70 80"/><path d="M155 60 L140 80"/>`),
-      svg(`${head(55,70)}<path d="M70 90 H140"/><path d="M70 90 V150"/><path d="M140 90 V150"/><path d="M70 150 H140"/><path d="M55 70 L70 90"/><path d="M150 70 L140 90"/>`)
-    ],
-    incline_push: [
-      // hands elevated on desk line
-      svg(`${head(70,70)}<path d="M40 100 H120"/><path d="M85 95 L130 160"/><path d="M100 100 L60 90"/><path d="M130 160 L115 195"/><path d="M130 160 L150 195"/>`),
-      svg(`${head(75,85)}<path d="M40 100 H120"/><path d="M90 105 L125 155"/><path d="M100 108 L65 100"/><path d="M125 155 L112 195"/><path d="M125 155 L148 195"/>`),
-      svg(`${head(70,70)}<path d="M40 100 H120"/><path d="M85 95 L130 160"/><path d="M100 100 L60 90"/><path d="M130 160 L115 195"/><path d="M130 160 L150 195"/>`)
+      svg(`${head(100,38)}<path d="M100 54 V118"/><path d="M100 72 L62 110"/><path d="M100 72 L138 110"/><path d="M100 118 L84 190"/><path d="M100 118 L116 190"/><line x1="55" y1="152" x2="145" y2="152" opacity="0.35"/>`),
+      svg(`${head(100,52)}<path d="M100 68 V122"/><path d="M100 86 L66 118"/><path d="M100 86 L134 118"/><path d="M100 122 L76 152"/><path d="M100 122 L124 152"/><path d="M70 152 H130"/><path d="M76 152 V192"/><path d="M124 152 V192"/>`),
+      svg(`${head(100,38)}<path d="M100 54 V118"/><path d="M100 72 L62 110"/><path d="M100 72 L138 110"/><path d="M100 118 L84 190"/><path d="M100 118 L116 190"/>`)
     ]
   };
   return frames[key] || frames.march;
 }
+
 
 
 function customDemoHtml(name, key) {
