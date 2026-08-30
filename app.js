@@ -410,46 +410,87 @@ function prDemoHtml(name) { return null; }
 
 function wgDemoHtml(name, opts = {}) {
   const slug = resolveGuideSlug(name);
-  preloadGuideSlug(slug); // warm cache while rendering
+  preloadGuideSlug(slug);
 
   const labels = ['Setup', 'Move', 'Finish'];
-  // Hero: 3 animated frames. Strip reuses same URLs (browser cache — no extra network).
+  const frame = (n, extra) =>
+    `<img class="wg-frame f${n}" src="${wgFrameUrl(slug, n)}" alt="" decoding="async" width="320" height="320"
+      ${extra || ''}
+      onerror="this.onerror=null;this.src='${wgFrameUrl('bodyweight-squat', n)}'" />`;
+
   const strip = [1, 2, 3].map((n) => `
     <div class="wg-cell">
       <div class="wg-cell-frame">
-        <img src="${wgFrameUrl(slug, n)}" alt="${labels[n - 1]}" decoding="async" loading="lazy" width="120" height="120" />
+        <img src="${wgFrameUrl(slug, n)}" alt="${labels[n - 1]}" decoding="async" loading="lazy" width="96" height="96"
+          onerror="this.onerror=null;this.src='${wgFrameUrl('bodyweight-squat', n)}'" />
       </div>
       <span class="wg-label">${labels[n - 1]}</span>
     </div>`).join('');
+
   return `<div class="wg-demo" data-wg="${slug}" role="img" aria-label="Form guide for ${name}">
     <div class="wg-stage wg-stage-hero">
-      <img class="wg-frame f1" src="${wgFrameUrl(slug, 1)}" alt="" decoding="async" fetchpriority="high" width="280" height="280"
-        onerror="this.onerror=null;this.src='${wgFrameUrl('bodyweight-squat', 1)}'" />
-      <img class="wg-frame f2" src="${wgFrameUrl(slug, 2)}" alt="" decoding="async" width="280" height="280"
-        onerror="this.onerror=null;this.src='${wgFrameUrl('bodyweight-squat', 2)}'" />
-      <img class="wg-frame f3" src="${wgFrameUrl(slug, 3)}" alt="" decoding="async" width="280" height="280"
-        onerror="this.onerror=null;this.src='${wgFrameUrl('bodyweight-squat', 3)}'" />
+      ${frame(1, 'fetchpriority="high"')}
+      ${frame(2, '')}
+      ${frame(3, '')}
       <div class="wg-glow"></div>
     </div>
     <div class="wg-strip" aria-hidden="true">${strip}</div>
-    <p class="wg-credit">Animated form · Setup → Move → Finish</p>
+    <p class="wg-credit">Form guide · Setup → Move → Finish</p>
   </div>`;
 }
 
 
 function photoUrl(name) {
-  return '/assets/exercises/' + photoKey(name) + '.jpg?v=23';
+  return '/assets/exercises/' + photoKey(name) + '.jpg?v=24';
 }
 function videoUrl(name) {
   return '/assets/videos/' + photoKey(name) + '.mp4?v=3';
 }
+/** Category → representative CDN slug so workout cards match exercise art language */
+function categoryGuideSlug(name) {
+  const map = {
+    office: 'wall-sit',
+    park: 'step-up',
+    home: 'bodyweight-squat',
+    core: 'plank',
+    stretch: 'worlds-greatest-stretch',
+    strength: 'push-up',
+    pushup: 'push-up',
+    squat: 'bodyweight-squat',
+    plank: 'plank',
+    lunge: 'reverse-lunge',
+    run: 'high-knees',
+    jump: 'jump-squat',
+    burpee: 'burpee',
+    yoga: 'cat-cow-stretch',
+    gym: 'push-up',
+    default: 'bodyweight-squat'
+  };
+  return map[photoKey(name)] || 'bodyweight-squat';
+}
+function guideSlugForPreview(name) {
+  if (name && EXERCISE_GUIDE[name]) return resolveGuideSlug(name);
+  // try exact exercise match ignoring case
+  const lower = (name || '').toLowerCase();
+  for (const key of Object.keys(EXERCISE_GUIDE)) {
+    if (key.toLowerCase() === lower) return resolveGuideSlug(key);
+  }
+  return categoryGuideSlug(name);
+}
+/** Uniform square thumb — same line-art + frame as the workout player */
 function iconFor(name) {
-  return `<img class="photo-thumb" src="${photoUrl(name)}" alt="" loading="lazy" />`;
+  const slug = guideSlugForPreview(name);
+  return `<span class="ex-thumb" data-wg="${slug}" aria-hidden="true">
+    <img src="${wgFrameUrl(slug, 2)}" alt="" loading="lazy" decoding="async" width="64" height="64"
+      onerror="this.onerror=null;this.src='${wgFrameUrl('bodyweight-squat', 2)}'" />
+  </span>`;
 }
 function iconSvg(name, sizeClass) {
-  // compatibility: large photo for stage
   if (sizeClass && sizeClass.includes('lg')) {
-    return `<img class="photo-stage" src="${photoUrl(name)}" alt="" />`;
+    const slug = guideSlugForPreview(name);
+    return `<span class="ex-thumb ex-thumb-lg" data-wg="${slug}">
+      <img src="${wgFrameUrl(slug, 2)}" alt="" decoding="async" />
+    </span>`;
   }
   return iconFor(name);
 }
@@ -1464,7 +1505,7 @@ function renderLogin() {
     <div class="divider"><span>or email</span></div>
     <div class="form">
       <input id="email" type="email" placeholder="Email" autocomplete="email" />
-      <input id="password" type="password" placeholder="Password (min 8)" autocomplete="current-password" />
+      <input id="password" type="password" placeholder="Password (min 6)" autocomplete="current-password" />
       <button class="btn primary" data-action="signin">Sign In</button>
       <button class="btn secondary" data-action="signup">Create Account</button>
     </div>
@@ -1555,7 +1596,7 @@ function renderWorkoutDetail() {
       <button class="back" data-go="library">←</button>
       <h2>${w.title}</h2>
     </div>
-    <img class="photo-hero" src="${photoUrl(w.title)}" alt="${w.title}" />
+    <div class="workout-hero-card">${iconFor((w.exercises && w.exercises[0] && w.exercises[0].name) || w.title)}</div>
     <p class="muted center">${w.place} · ${w.durationLabel}</p>
     <p class="mb center">${w.description}</p>
     ${prev ? `<div class="card highlight">
@@ -2062,7 +2103,6 @@ async function handleAction(action, el) {
     const email = $('#email')?.value?.trim();
     const password = $('#password')?.value;
     if (!email || !password) { if (msg) msg.textContent = 'Fill in all fields'; return; }
-    if (password.length < 8) { if (msg) msg.textContent = 'Password must be at least 8 characters'; return; }
     if (!supabaseClient) {
       store.set('guest', { email });
       currentUser = { id: 'local', email, isGuest: true };
