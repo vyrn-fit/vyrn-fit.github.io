@@ -1741,6 +1741,123 @@
     .goal-bar { margin-top: 10px; height: 6px; border-radius: 999px; background: #1f1f1f; overflow: hidden; }
     .goal-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, #c41e12, #ff3b2f); }
     .beta-note { font-size: 11px; color: #737373; text-align: center; margin-top: 6px; }
+
+    /* Player layout — prevent image/text overlap */
+    .workout-focus {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 12px 16px 24px;
+      min-height: 100dvh;
+      box-sizing: border-box;
+      gap: 0;
+    }
+    .workout-focus > .muted {
+      flex-shrink: 0;
+      margin: 0 0 8px;
+      z-index: 2;
+    }
+    .workout-focus .ex-stage {
+      flex-shrink: 0;
+      width: min(240px, 72vw);
+      margin: 0 auto 4px;
+      position: relative;
+      z-index: 1;
+      overflow: hidden;
+      border-radius: 20px;
+    }
+    .workout-focus .wg-demo {
+      width: 100%;
+      margin: 0;
+    }
+    .workout-focus .wg-stage-hero {
+      width: 100%;
+      aspect-ratio: 1;
+      max-height: 240px;
+      margin: 0;
+    }
+    .workout-focus.phase-work .wg-stage-hero {
+      max-height: 200px;
+    }
+    .workout-focus .wg-credit {
+      margin: 6px 0 0;
+      font-size: 9px;
+      letter-spacing: 0.12em;
+      line-height: 1.2;
+      color: #525252;
+      text-transform: uppercase;
+      position: static;
+      z-index: 2;
+    }
+    .workout-focus.phase-work .wg-credit,
+    .workout-focus.phase-work .wg-strip {
+      display: none !important;
+    }
+    .workout-focus .timer-display.big {
+      flex-shrink: 0;
+      margin: 10px 0 4px;
+      line-height: 1;
+      position: relative;
+      z-index: 2;
+    }
+    .workout-focus h2 {
+      flex-shrink: 0;
+      margin: 0 0 8px;
+      padding: 0 12px;
+      text-align: center;
+      line-height: 1.25;
+      max-width: 320px;
+      position: relative;
+      z-index: 2;
+    }
+    .workout-focus .target-chip {
+      flex-shrink: 0;
+      margin: 0 0 10px;
+      position: relative;
+      z-index: 2;
+    }
+    .workout-focus .form-guide {
+      flex-shrink: 0;
+      width: min(320px, 92vw);
+      margin: 0 auto 12px;
+      position: relative;
+      z-index: 2;
+    }
+    .workout-focus.phase-work .form-guide {
+      padding: 0;
+      border: none;
+      background: transparent;
+      margin-bottom: 8px;
+    }
+    .workout-focus.phase-work .form-focus {
+      margin: 0;
+      padding: 0 16px;
+      font-size: 14px;
+      line-height: 1.35;
+      color: #ff8a7a;
+      text-align: center;
+    }
+    .workout-focus .progress-bar {
+      flex-shrink: 0;
+      width: min(280px, 80vw);
+      margin: 4px auto 14px;
+    }
+    .workout-focus .btn-stack {
+      flex-shrink: 0;
+      width: min(320px, 92vw);
+      margin-top: auto;
+      padding-top: 8px;
+      gap: 8px;
+    }
+    .workout-focus.phase-ready .wg-stage-hero {
+      max-height: 180px;
+    }
+    .workout-focus.phase-ready .form-guide {
+      max-height: 160px;
+      overflow: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
 </style>
   <script>
     (function () {
