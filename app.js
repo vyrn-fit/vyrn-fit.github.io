@@ -301,7 +301,13 @@ const WG_SAFE = new Set([
 ]);
 
 function customKey(name) {
-  // Stick SVG path disabled — all exercises use CDN line-art
+  const g = EXERCISE_GUIDE[name] || EXERCISE_GUIDE[(name || '').trim()];
+  if (g && g.type === 'custom') return g.key;
+  // fuzzy fallback for slight name variants
+  const n = (name || '').toLowerCase();
+  for (const [k, v] of Object.entries(EXERCISE_GUIDE)) {
+    if (k.toLowerCase() === n && v.type === 'custom') return v.key;
+  }
   return null;
 }
 
@@ -329,98 +335,44 @@ function wgFrameUrl(slug, frame) {
   return `${WG_CDN}/${slug}/frame-${frame}.png`;
 }
 
-/** Equipment-free SVG silhouettes — Setup / Move / Finish */
-function customFrames(key) {
-  const stroke = '#f5f5f5';
-  // Richer figure: head + torso oval + limbs (less "stick man")
-  const svg = (parts) => `<svg viewBox="0 0 200 220" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-    <rect width="200" height="220" fill="transparent"/>
-    <g fill="none" stroke="${stroke}" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">${parts}</g>
-  </svg>`;
-  const head = (x, y, r=16) => `<circle cx="${x}" cy="${y}" r="${r}"/>`;
-  const torso = (x1,y1,x2,y2) => `<path d="M${x1} ${y1} L${x2} ${y2}"/>`;
+/** In-memory URL set so we only hit network once per frame per session */
+const _wgPreloaded = new Set();
 
-  const frames = {
-    // Calf raise — rise onto toes (no machine)
-    calf: [
-      svg(`${head(100,38)}<path d="M100 54 V118"/><path d="M100 72 L62 108"/><path d="M100 72 L138 108"/><path d="M100 118 L84 188"/><path d="M100 118 L116 188"/><line x1="70" y1="192" x2="130" y2="192"/>`),
-      svg(`${head(100,26)}<path d="M100 42 V106"/><path d="M100 60 L62 96"/><path d="M100 60 L138 96"/><path d="M100 106 L86 168"/><path d="M100 106 L114 168"/><path d="M80 172 L86 168 L92 172"/><path d="M108 172 L114 168 L120 172"/>`),
-      svg(`${head(100,38)}<path d="M100 54 V118"/><path d="M100 72 L62 108"/><path d="M100 72 L138 108"/><path d="M100 118 L84 188"/><path d="M100 118 L116 188"/><line x1="70" y1="192" x2="130" y2="192"/>`)
-    ],
-    neck_shoulder: [
-      svg(`${head(100,46)}<path d="M100 62 V118"/><path d="M100 78 L58 108"/><path d="M100 78 L142 108"/><path d="M100 118 L84 190"/><path d="M100 118 L116 190"/>`),
-      svg(`${head(114,42)}<path d="M100 62 V118"/><path d="M100 74 L55 90"/><path d="M100 74 L145 90"/><path d="M100 118 L84 190"/><path d="M100 118 L116 190"/>`),
-      svg(`${head(100,46)}<path d="M100 62 V118"/><path d="M100 80 L50 102"/><path d="M100 80 L150 102"/><path d="M100 118 L84 190"/><path d="M100 118 L116 190"/>`)
-    ],
-    chin_tuck: [
-      svg(`${head(100,46)}<path d="M100 62 V118"/><path d="M100 78 L62 112"/><path d="M100 78 L138 112"/><path d="M100 118 L84 190"/><path d="M100 118 L116 190"/>`),
-      svg(`${head(90,48)}<path d="M100 62 V118"/><path d="M100 78 L62 112"/><path d="M100 78 L138 112"/><path d="M100 118 L84 190"/><path d="M100 118 L116 190"/><path d="M72 46 H90"/>`),
-      svg(`${head(100,46)}<path d="M100 62 V118"/><path d="M100 78 L62 112"/><path d="M100 78 L138 112"/><path d="M100 118 L84 190"/><path d="M100 118 L116 190"/>`)
-    ],
-    hip_circle: [
-      svg(`${head(100,40)}<path d="M100 56 V118"/><path d="M100 72 L62 110"/><path d="M100 72 L138 110"/><path d="M100 118 L82 190"/><path d="M100 118 L118 190"/>`),
-      svg(`${head(100,40)}<path d="M100 56 V116"/><path d="M100 72 L62 110"/><path d="M100 72 L140 98"/><path d="M100 116 L80 190"/><path d="M100 116 L138 152 L152 168"/>`),
-      svg(`${head(100,40)}<path d="M100 56 V116"/><path d="M100 72 L60 98"/><path d="M100 72 L138 110"/><path d="M100 116 L62 152 L48 168"/><path d="M100 116 L120 190"/>`)
-    ],
-    ankle: [
-      svg(`${head(100,40)}<path d="M100 56 V122"/><path d="M100 72 L64 112"/><path d="M100 72 L136 112"/><path d="M100 122 L86 190"/><path d="M100 122 L114 190"/><line x1="72" y1="194" x2="128" y2="194"/>`),
-      svg(`${head(100,40)}<path d="M100 56 V122"/><path d="M100 72 L64 112"/><path d="M100 72 L136 112"/><path d="M100 122 L86 190"/><path d="M100 122 L122 180 L138 192"/>`),
-      svg(`${head(100,40)}<path d="M100 56 V122"/><path d="M100 72 L64 112"/><path d="M100 72 L136 112"/><path d="M100 122 L78 180 L62 192"/><path d="M100 122 L114 190"/>`)
-    ],
-    side_bend: [
-      svg(`${head(100,40)}<path d="M100 56 V118"/><path d="M100 72 L64 102"/><path d="M100 72 L136 102"/><path d="M100 118 L84 190"/><path d="M100 118 L116 190"/>`),
-      svg(`${head(120,46)}<path d="M108 60 V118"/><path d="M108 74 L88 52"/><path d="M108 78 L136 118"/><path d="M108 118 L92 190"/><path d="M108 118 L124 190"/>`),
-      svg(`${head(80,46)}<path d="M92 60 V118"/><path d="M92 78 L64 118"/><path d="M92 74 L112 52"/><path d="M92 118 L76 190"/><path d="M92 118 L108 190"/>`)
-    ],
-    scap_squeeze: [
-      svg(`${head(100,40)}<path d="M100 56 V118"/><path d="M100 74 L48 92"/><path d="M100 74 L152 92"/><path d="M100 118 L84 190"/><path d="M100 118 L116 190"/>`),
-      svg(`${head(100,40)}<path d="M100 56 V118"/><path d="M100 74 L36 86"/><path d="M100 74 L164 86"/><path d="M100 118 L84 190"/><path d="M100 118 L116 190"/>`),
-      svg(`${head(100,40)}<path d="M100 56 V118"/><path d="M100 78 L72 96"/><path d="M100 78 L128 96"/><path d="M100 118 L84 190"/><path d="M100 118 L116 190"/>`)
-    ],
-    chest_open: [
-      svg(`${head(100,40)}<path d="M100 56 V118"/><path d="M100 74 L64 112"/><path d="M100 74 L136 112"/><path d="M100 118 L84 190"/><path d="M100 118 L116 190"/>`),
-      svg(`${head(100,40)}<path d="M100 56 V118"/><path d="M100 72 L40 72"/><path d="M100 72 L160 72"/><path d="M100 118 L84 190"/><path d="M100 118 L116 190"/>`),
-      svg(`${head(100,40)}<path d="M100 56 V118"/><path d="M100 72 L34 54"/><path d="M100 72 L166 54"/><path d="M100 118 L84 190"/><path d="M100 118 L116 190"/>`)
-    ],
-    arm_circle: [
-      svg(`${head(100,40)}<path d="M100 56 V118"/><path d="M100 74 L56 122"/><path d="M100 74 L144 122"/><path d="M100 118 L84 190"/><path d="M100 118 L116 190"/>`),
-      svg(`${head(100,40)}<path d="M100 56 V118"/><path d="M100 72 L48 72"/><path d="M100 72 L152 72"/><path d="M100 118 L84 190"/><path d="M100 118 L116 190"/>`),
-      svg(`${head(100,40)}<path d="M100 56 V118"/><path d="M100 74 L64 48"/><path d="M100 74 L136 48"/><path d="M100 118 L84 190"/><path d="M100 118 L116 190"/>`)
-    ],
-    walk_place: [
-      svg(`${head(100,40)}<path d="M100 56 V116"/><path d="M100 72 L70 108"/><path d="M100 72 L130 108"/><path d="M100 116 L86 190"/><path d="M100 116 L114 190"/>`),
-      svg(`${head(100,40)}<path d="M100 56 V116"/><path d="M100 72 L66 100"/><path d="M100 72 L132 110"/><path d="M100 116 L80 190"/><path d="M100 116 L128 164 L134 190"/>`),
-      svg(`${head(100,40)}<path d="M100 56 V116"/><path d="M100 72 L68 110"/><path d="M100 72 L134 100"/><path d="M100 116 L72 164 L66 190"/><path d="M100 116 L120 190"/>`)
-    ],
-    seated_twist: [
-      svg(`${head(100,48)}<path d="M100 64 V108"/><path d="M100 80 L66 102"/><path d="M100 80 L134 102"/><path d="M68 138 H132"/><path d="M84 138 V192"/><path d="M116 138 V192"/>`),
-      svg(`${head(116,50)}<path d="M106 66 V108"/><path d="M106 82 L128 68"/><path d="M106 82 L90 106"/><path d="M68 138 H132"/><path d="M84 138 V192"/><path d="M116 138 V192"/>`),
-      svg(`${head(84,50)}<path d="M94 66 V108"/><path d="M94 82 L72 68"/><path d="M94 82 L110 106"/><path d="M68 138 H132"/><path d="M84 138 V192"/><path d="M116 138 V192"/>`)
-    ],
-    thoracic: [
-      svg(`${head(100,46)}<path d="M100 62 V118"/><path d="M100 78 L58 104"/><path d="M100 78 L142 104"/><path d="M100 118 L84 190"/><path d="M100 118 L116 190"/>`),
-      svg(`${head(100,46)}<path d="M100 62 V118"/><path d="M100 74 L42 82"/><path d="M100 80 L134 112"/><path d="M100 118 L84 190"/><path d="M100 118 L116 190"/>`),
-      svg(`${head(100,46)}<path d="M100 62 V118"/><path d="M100 80 L66 112"/><path d="M100 74 L158 82"/><path d="M100 118 L84 190"/><path d="M100 118 L116 190"/>`)
-    ],
-    hang_alt: [
-      svg(`${head(100,68)}<path d="M100 84 V128"/><path d="M100 96 L66 128"/><path d="M100 96 L134 128"/><path d="M100 128 L84 190"/><path d="M100 128 L116 190"/>`),
-      svg(`${head(100,52)}<path d="M100 68 V122"/><path d="M100 80 L48 52"/><path d="M100 80 L152 52"/><path d="M100 122 L84 190"/><path d="M100 122 L116 190"/>`),
-      svg(`${head(100,46)}<path d="M100 62 V118"/><path d="M100 74 L42 36"/><path d="M100 74 L158 36"/><path d="M100 118 L84 190"/><path d="M100 118 L116 190"/>`)
-    ],
-    // fallbacks still available if referenced
-    march: [
-      svg(`${head(100,40)}<path d="M100 56 V118"/><path d="M100 72 L62 110"/><path d="M100 72 L138 110"/><path d="M100 118 L80 190"/><path d="M100 118 L120 190"/>`),
-      svg(`${head(100,40)}<path d="M100 56 V116"/><path d="M100 72 L64 100"/><path d="M100 72 L136 96"/><path d="M100 116 L78 190"/><path d="M100 116 L132 148 L148 122"/>`),
-      svg(`${head(100,40)}<path d="M100 56 V116"/><path d="M100 72 L64 96"/><path d="M100 72 L136 100"/><path d="M100 116 L68 148 L52 122"/><path d="M100 116 L122 190"/>`)
-    ],
-    sit_stand: [
-      svg(`${head(100,38)}<path d="M100 54 V118"/><path d="M100 72 L62 110"/><path d="M100 72 L138 110"/><path d="M100 118 L84 190"/><path d="M100 118 L116 190"/><line x1="55" y1="152" x2="145" y2="152" opacity="0.35"/>`),
-      svg(`${head(100,52)}<path d="M100 68 V122"/><path d="M100 86 L66 118"/><path d="M100 86 L134 118"/><path d="M100 122 L76 152"/><path d="M100 122 L124 152"/><path d="M70 152 H130"/><path d="M76 152 V192"/><path d="M124 152 V192"/>`),
-      svg(`${head(100,38)}<path d="M100 54 V118"/><path d="M100 72 L62 110"/><path d="M100 72 L138 110"/><path d="M100 118 L84 190"/><path d="M100 118 L116 190"/>`)
-    ]
-  };
-  return frames[key] || frames.march;
+function resolveGuideSlug(name) {
+  const g = EXERCISE_GUIDE[name] || null;
+  let slug = (g && g.type === 'cdn') ? g.key : (typeof wgSlug === 'function' ? wgSlug(name) : 'bodyweight-squat');
+  const banned = new Set([
+    'walking','running','standing-calf-raise','calf-raise','dumbbell-side-bend',
+    'band-pull-apart','active-hang','dead-hang','seated-calf-raise'
+  ]);
+  if (!slug || banned.has(slug)) slug = 'high-knees';
+  return slug;
 }
+
+/** Preload 3 frames for a slug (browser + HTTP cache). Idempotent. */
+function preloadGuideSlug(slug) {
+  if (!slug) return;
+  for (let n = 1; n <= 3; n++) {
+    const url = wgFrameUrl(slug, n);
+    if (_wgPreloaded.has(url)) continue;
+    _wgPreloaded.add(url);
+    const img = new Image();
+    img.decoding = 'async';
+    img.src = url;
+  }
+}
+
+/** Preload current + next N exercises in an active workout */
+function preloadWorkoutGuides(workout, fromIndex, ahead) {
+  if (!workout || !workout.exercises) return;
+  const start = Math.max(0, fromIndex | 0);
+  const end = Math.min(workout.exercises.length, start + (ahead || 2));
+  for (let i = start; i < end; i++) {
+    preloadGuideSlug(resolveGuideSlug(workout.exercises[i].name));
+  }
+}
+
+
 
 
 
@@ -449,33 +401,25 @@ function prVideoUrl(name) { return null; }
 function prDemoHtml(name) { return null; }
 
 function wgDemoHtml(name, opts = {}) {
-  // Always prefer professional CDN line-art — no stick SVG
-  const g = EXERCISE_GUIDE[name] || null;
-  let slug = (g && g.type === 'cdn') ? g.key : wgSlug(name);
-  // Hard ban equipment / treadmill CDN packs
-  const banned = new Set([
-    'walking','running','standing-calf-raise','calf-raise','dumbbell-side-bend',
-    'band-pull-apart','active-hang','dead-hang','seated-calf-raise'
-  ]);
-  if (banned.has(slug)) slug = 'high-knees';
-  if (!slug) slug = 'bodyweight-squat';
+  const slug = resolveGuideSlug(name);
+  preloadGuideSlug(slug); // warm cache while rendering
 
   const labels = ['Setup', 'Move', 'Finish'];
+  // Hero: 3 animated frames. Strip reuses same URLs (browser cache — no extra network).
   const strip = [1, 2, 3].map((n) => `
     <div class="wg-cell">
       <div class="wg-cell-frame">
-        <img src="${wgFrameUrl(slug, n)}" alt="${labels[n - 1]}" decoding="async"
-          onerror="this.onerror=null;this.src='${wgFrameUrl('bodyweight-squat', n)}'" />
+        <img src="${wgFrameUrl(slug, n)}" alt="${labels[n - 1]}" decoding="async" loading="lazy" width="120" height="120" />
       </div>
       <span class="wg-label">${labels[n - 1]}</span>
     </div>`).join('');
   return `<div class="wg-demo" data-wg="${slug}" role="img" aria-label="Form guide for ${name}">
     <div class="wg-stage wg-stage-hero">
-      <img class="wg-frame f1" src="${wgFrameUrl(slug, 1)}" alt="" decoding="async"
+      <img class="wg-frame f1" src="${wgFrameUrl(slug, 1)}" alt="" decoding="async" fetchpriority="high" width="280" height="280"
         onerror="this.onerror=null;this.src='${wgFrameUrl('bodyweight-squat', 1)}'" />
-      <img class="wg-frame f2" src="${wgFrameUrl(slug, 2)}" alt="" decoding="async"
+      <img class="wg-frame f2" src="${wgFrameUrl(slug, 2)}" alt="" decoding="async" width="280" height="280"
         onerror="this.onerror=null;this.src='${wgFrameUrl('bodyweight-squat', 2)}'" />
-      <img class="wg-frame f3" src="${wgFrameUrl(slug, 3)}" alt="" decoding="async"
+      <img class="wg-frame f3" src="${wgFrameUrl(slug, 3)}" alt="" decoding="async" width="280" height="280"
         onerror="this.onerror=null;this.src='${wgFrameUrl('bodyweight-squat', 3)}'" />
       <div class="wg-glow"></div>
     </div>
@@ -2158,6 +2102,7 @@ async function handleAction(action, el) {
     if (!w.free && !isPro) { handleAction('upgrade'); return; }
     activeWorkout = w;
     exerciseIndex = 0;
+    try { preloadWorkoutGuides(activeWorkout, 0, 3); } catch (_) {}
     phase = 'ready';
     phaseSeconds = w.exercises[0].duration;
     totalSeconds = 0;
