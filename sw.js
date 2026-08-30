@@ -1,4 +1,4 @@
-const CACHE = 'vyrn-v42';
+const CACHE = 'vyrn-v43';
 const ASSETS = ['/', '/index.html', '/app.js', '/site.js', '/manifest.json', '/assets/logo.png'];
 
 self.addEventListener('install', (e) => {
@@ -17,7 +17,28 @@ self.addEventListener('fetch', (e) => {
   if (e.request.method !== 'GET') return;
   const url = new URL(e.request.url);
 
-  // External CDNs — network only
+  // Workout-guide CDN — cache-first (immutable versioned assets)
+  if (
+    url.hostname === 'cdn.jsdelivr.net' &&
+    url.pathname.includes('@bryllim/workout-guide')
+  ) {
+    e.respondWith(
+      caches.open(CACHE).then((cache) =>
+        cache.match(e.request).then((hit) => {
+          if (hit) return hit;
+          return fetch(e.request).then((res) => {
+            if (res && res.status === 200) {
+              cache.put(e.request, res.clone());
+            }
+            return res;
+          }).catch(() => hit || Response.error());
+        })
+      )
+    );
+    return;
+  }
+
+  // Other external CDNs — network only
   if (url.origin !== self.location.origin) {
     e.respondWith(fetch(e.request));
     return;
