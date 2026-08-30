@@ -1,4 +1,4 @@
-const CACHE = 'vyrn-v51';
+const CACHE = 'vyrn-v54';
 const ASSETS = [
   '/',
   '/index.html',
@@ -11,11 +11,7 @@ const ASSETS = [
   '/assets/favicon.png',
   '/assets/wg/bodyweight-squat/frame-1.png',
   '/assets/wg/bodyweight-squat/frame-2.png',
-  '/assets/wg/bodyweight-squat/frame-3.png',
-  '/assets/wg/push-up/frame-1.png',
-  '/assets/wg/push-up/frame-2.png',
-  '/assets/wg/plank/frame-1.png',
-  '/assets/wg/high-knees/frame-1.png'
+  '/assets/wg/bodyweight-squat/frame-3.png'
 ];
 
 self.addEventListener('install', (e) => {
@@ -38,6 +34,16 @@ self.addEventListener('activate', (e) => {
 self.addEventListener('fetch', (e) => {
   if (e.request.method !== 'GET') return;
   const url = new URL(e.request.url);
+
+  if (url.pathname.startsWith('/assets/wg/') || url.pathname.startsWith('/assets/guides/')) {
+    e.respondWith(
+      caches.match(e.request).then((c) => c || fetch(e.request).then((res) => {
+        if (res && res.status === 200) caches.open(CACHE).then((cache) => cache.put(e.request, res.clone()));
+        return res;
+      }))
+    );
+    return;
+  }
 
   // Workout-guide images: network-first, cache OK responses only (avoid sticky broken cache)
   if (
