@@ -1,8 +1,23 @@
-const CACHE = 'vyrn-v43';
-const ASSETS = ['/', '/index.html', '/app.js', '/site.js', '/manifest.json', '/assets/logo.png'];
+const CACHE = 'vyrn-v44';
+const ASSETS = [
+  '/',
+  '/index.html',
+  '/app.js',
+  '/site.js',
+  '/manifest.json',
+  '/assets/logo.png',
+  '/assets/icon.png',
+  '/assets/icon-192.png',
+  '/assets/favicon.png'
+];
 
 self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)).then(() => self.skipWaiting()));
+  e.waitUntil(
+    caches.open(CACHE)
+      .then((c) => c.addAll(ASSETS.map((u) => new Request(u, { cache: 'reload' }))))
+      .then(() => self.skipWaiting())
+      .catch(() => self.skipWaiting())
+  );
 });
 
 self.addEventListener('activate', (e) => {
@@ -26,10 +41,8 @@ self.addEventListener('fetch', (e) => {
       caches.open(CACHE).then((cache) =>
         cache.match(e.request).then((hit) => {
           if (hit) return hit;
-          return fetch(e.request).then((res) => {
-            if (res && res.status === 200) {
-              cache.put(e.request, res.clone());
-            }
+          return fetch(e.request, { mode: 'cors' }).then((res) => {
+            if (res && res.status === 200) cache.put(e.request, res.clone());
             return res;
           }).catch(() => hit || Response.error());
         })
@@ -38,19 +51,19 @@ self.addEventListener('fetch', (e) => {
     return;
   }
 
-  // Other external CDNs — network only
+  // Supabase & other third-party — network only (auth/API)
   if (url.origin !== self.location.origin) {
-    e.respondWith(fetch(e.request));
-    return;
+    return; // default browser fetch
   }
 
-  // App shell / JS — network-first so updates land quickly
+  // App shell — network-first so deploys show up quickly
   if (
     url.pathname === '/' ||
     url.pathname === '/index.html' ||
     url.pathname === '/app.js' ||
     url.pathname === '/site.js' ||
-    url.pathname === '/sw.js'
+    url.pathname === '/sw.js' ||
+    url.pathname === '/manifest.json'
   ) {
     e.respondWith(
       fetch(e.request)
@@ -66,13 +79,12 @@ self.addEventListener('fetch', (e) => {
     return;
   }
 
-  // Media — cache-first
-  if (url.pathname.match(/\.(mp4|webm|mov|mp3|wav|glb|gltf|png|jpg|jpeg|svg|webp)(\?|$)/i)) {
+  // Local media — cache-first
+  if (url.pathname.match(/\.(mp4|webm|mov|mp3|wav|glb|gltf|png|jpg|jpeg|svg|webp|woff2?)(\?|$)/i)) {
     e.respondWith(
       caches.match(e.request).then((c) => c || fetch(e.request).then((res) => {
         if (res && res.status === 200) {
-          const copy = res.clone();
-          caches.open(CACHE).then((cache) => cache.put(e.request, copy));
+          caches.open(CACHE).then((cache) => cache.put(e.request, res.clone()));
         }
         return res;
       }))
@@ -85,8 +97,7 @@ self.addEventListener('fetch', (e) => {
       if (cached) return cached;
       return fetch(e.request).then((res) => {
         if (!res || res.status !== 200 || res.type === 'opaque') return res;
-        const copy = res.clone();
-        caches.open(CACHE).then((c) => c.put(e.request, copy));
+        caches.open(CACHE).then((c) => c.put(e.request, res.clone()));
         return res;
       }).catch(() => {
         if (e.request.mode === 'navigate') return caches.match('/index.html');
