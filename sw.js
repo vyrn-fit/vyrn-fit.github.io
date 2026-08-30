@@ -1,4 +1,4 @@
-const CACHE = 'vyrn-v53';
+const CACHE = 'vyrn-v51';
 const ASSETS = [
   '/',
   '/index.html',
@@ -8,7 +8,14 @@ const ASSETS = [
   '/assets/logo.png',
   '/assets/icon.png',
   '/assets/icon-192.png',
-  '/assets/favicon.png'
+  '/assets/favicon.png',
+  '/assets/wg/bodyweight-squat/frame-1.png',
+  '/assets/wg/bodyweight-squat/frame-2.png',
+  '/assets/wg/bodyweight-squat/frame-3.png',
+  '/assets/wg/push-up/frame-1.png',
+  '/assets/wg/push-up/frame-2.png',
+  '/assets/wg/plank/frame-1.png',
+  '/assets/wg/high-knees/frame-1.png'
 ];
 
 self.addEventListener('install', (e) => {
