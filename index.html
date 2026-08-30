@@ -6,16 +6,38 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1" />
   <meta name="theme-color" content="#c41e12" />
-  <meta name="description" content="Vyrn — Show up. Put in the work. Equipment-free training + weekly challenges." />
+  <meta name="description" content="Vyrn — Show up. Put in the work. Equipment-free home, office &amp; outdoor training. Free workouts + optional Pro." />
+  <meta name="keywords" content="fitness, bodyweight, home workout, office exercise, PWA, training" />
+  <meta name="author" content="Vyrn" />
+  <meta name="robots" content="index, follow" />
+  <link rel="canonical" href="https://vyrn-fit.github.io/" />
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Vyrn" />
+  <meta property="og:title" content="Vyrn — Show up. Put in the work." />
+  <meta property="og:description" content="Equipment-free training for home, office, and the park. Guided form, voice coaching, friends challenges." />
+  <meta property="og:url" content="https://vyrn-fit.github.io/" />
+  <meta property="og:image" content="https://vyrn-fit.github.io/assets/logo.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Vyrn — Show up. Put in the work." />
+  <meta name="twitter:description" content="Equipment-free training for home, office, and the park." />
+  <meta name="twitter:image" content="https://vyrn-fit.github.io/assets/logo.png" />
+
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Vyrn" />
+  <meta name="mobile-web-app-capable" content="yes" />
   <link rel="manifest" href="/manifest.json" />
   <link rel="icon" href="/assets/favicon.png" sizes="32x32" />
   <link rel="icon" href="/assets/icon.png" sizes="512x512" type="image/png" />
   <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png" />
-  <title>Vyrn</title>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <title>Vyrn — Show up. Put in the work.</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
@@ -1665,11 +1687,16 @@
 </head>
 <body>
   <div id="app"></div>
-  <script src="/site.js"></script>
-  <script src="/app.js"></script>
+  <script src="/site.js" defer></script>
+  <script src="/app.js" defer></script>
   <script>
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js').catch(() => {});
+      window.addEventListener('load', function () {
+        navigator.serviceWorker.register('/sw.js').then(function (reg) {
+          // Pick up new SW faster when sharing updates
+          if (reg && reg.update) reg.update();
+        }).catch(function () {});
+      });
     }
   </script>
 </body>
