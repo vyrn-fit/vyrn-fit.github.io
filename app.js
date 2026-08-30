@@ -173,6 +173,7 @@ function formStepsHtml(name) {
 
 // Workout Guide (CC BY-SA 4.0) — polished 3-frame form demos
 const WG_CDN_BASES = [
+  '/assets/guides',
   'https://cdn.jsdelivr.net/npm/@bryllim/workout-guide@1.0.0/assets',
   'https://fastly.jsdelivr.net/npm/@bryllim/workout-guide@1.0.0/assets',
   'https://unpkg.com/@bryllim/workout-guide@1.0.0/assets'
@@ -995,18 +996,10 @@ function getHistory() { return store.get('history') || []; }
 function getStats() {
   const history = getHistory();
   const today = todayKey();
-  const weekAgo = new Date();
-  weekAgo.setDate(weekAgo.getDate() - 6);
-  const weekKey = weekAgo.toISOString().slice(0, 10);
-  const weekCount = history.filter(h => h.date >= weekKey).length;
-  const weekGoal = 4;
   return {
     total: history.length,
     today: history.filter(h => h.date === today).length,
-    streak: store.get('streak') || 0,
-    weekCount,
-    weekGoal,
-    weekPct: Math.min(100, Math.round((weekCount / weekGoal) * 100))
+    streak: store.get('streak') || 0
   };
 }
 function lastSameWorkout(workoutId) {
@@ -1140,28 +1133,6 @@ function isSignedIn() {
   return !!(currentUser && !currentUser.isGuest && supabaseClient);
 }
 
-/** Load Pro flag from profile (server) with email/demo fallback for beta */
-async function applyEntitlements() {
-  let pro = false;
-  if (isSignedIn()) {
-    try {
-      const { data } = await supabaseClient
-        .from('profiles')
-        .select('is_pro, display_name, full_name')
-        .eq('id', currentUser.id)
-        .maybeSingle();
-      if (data?.is_pro) pro = true;
-    } catch (_) {}
-    const em = (currentUser.email || '').toLowerCase();
-    if (em.includes('pro')) pro = true; // test accounts
-  } else if (store.get('isPro')) {
-    pro = !!store.get('isPro');
-  }
-  isPro = pro;
-  store.set('isPro', pro);
-}
-
-
 function inviteLink(code) {
   return location.origin + '/?app=1&join=' + encodeURIComponent(code);
 }
@@ -1193,7 +1164,6 @@ async function ensureProfile() {
       display_name: name,
       updated_at: new Date().toISOString()
     }, { onConflict: 'id' });
-    // do not overwrite is_pro here
   } catch (e) {
     console.warn('profile', e.message || e);
   }
@@ -1422,11 +1392,15 @@ async function init() {
     const { data: { session } } = await supabaseClient.auth.getSession();
     if (session?.user) {
       currentUser = session.user;
-      await applyEntitlements();
+      if (currentUser.email?.toLowerCase().includes('pro')) {
+        isPro = true; store.set('isPro', true);
+      }
     }
-    supabaseClient.auth.onAuthStateChange(async (_e, s) => {
+    supabaseClient.auth.onAuthStateChange((_e, s) => {
       currentUser = s?.user || null;
-      await applyEntitlements();
+      if (currentUser?.email?.toLowerCase().includes('pro')) {
+        isPro = true; store.set('isPro', true);
+      }
       if (currentScreen !== 'workoutRun') render();
     });
   }
@@ -1545,23 +1519,15 @@ function renderWelcome() {
 function renderLogin() {
   const gOn = !!authProviders.google;
   const aOn = !!authProviders.apple;
+  const anyOauth = gOn || aOn;
   return `<div class="screen center fade-in">
     <img class="brand-logo-sm" src="/assets/logo.png" alt="Vyrn" />
     <h2>Welcome</h2>
     <p class="muted mb">Sign in to sync history and join challenges</p>
-    <div class="btn-stack" style="max-width:340px">
-      <button class="btn oauth google ${gOn ? '' : 'oauth-disabled'}" data-action="oauth-google" ${gOn ? '' : 'aria-disabled="true"'}>
-        <span class="oauth-ico">G</span> Continue with Google
-      </button>
-      <button class="btn oauth apple ${aOn ? '' : 'oauth-disabled'}" data-action="oauth-apple" ${aOn ? '' : 'aria-disabled="true"'}>
-        <span class="oauth-ico"></span> Continue with Apple
-      </button>
-    </div>
-    ${(!gOn || !aOn) ? `<p class="muted center" style="font-size:12px;max-width:320px;margin:8px auto 0">
-      ${!gOn && !aOn ? 'Google & Apple sign-in are not enabled on this project yet.' : (!gOn ? 'Google sign-in is not enabled yet.' : 'Apple sign-in is not enabled yet.')}
-      Use email below, or enable providers in Supabase Auth.
-    </p>` : ''}
-    <div class="divider"><span>or email</span></div>
+    ${anyOauth ? `<div class="btn-stack" style="max-width:340px">
+      ${gOn ? `<button class="btn oauth google" data-action="oauth-google"><span class="oauth-ico">G</span> Continue with Google</button>` : ''}
+      ${aOn ? `<button class="btn oauth apple" data-action="oauth-apple"><span class="oauth-ico"></span> Continue with Apple</button>` : ''}
+    </div><div class="divider"><span>or email</span></div>` : ''}
     <div class="form">
       <input id="email" type="email" placeholder="Email" autocomplete="email" />
       <input id="password" type="password" placeholder="Password (min 8)" autocomplete="current-password" />
@@ -1572,7 +1538,7 @@ function renderLogin() {
     <div class="divider"><span>or try instantly</span></div>
     <div class="btn-stack" style="max-width:340px;margin-top:0">
       <button class="btn secondary" data-action="guest">Continue as guest</button>
-      <details class="demo-details" style="margin-top:8px;text-align:left">
+      <details style="margin-top:8px">
         <summary class="muted" style="cursor:pointer;font-size:12px;list-style:none;text-align:center">Test accounts</summary>
         <div class="btn-stack" style="margin-top:8px">
           <button class="btn secondary" data-action="demo-free">Demo Free</button>
@@ -1598,15 +1564,6 @@ function renderHome() {
     </div>
     <div class="stats mb">
       <div class="stat"><div class="num">${stats.today}</div><div class="lbl">Today</div></div>
-    <div class="card mb" style="padding:12px 14px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-        <span style="font-size:13px;font-weight:600">Weekly goal</span>
-        <span class="muted" style="font-size:12px">${stats.weekCount}/${stats.weekGoal} sessions</span>
-      </div>
-      <div style="height:6px;background:#1f1f1f;border-radius:99px;overflow:hidden">
-        <div style="height:100%;width:${stats.weekPct}%;background:linear-gradient(90deg,#ff3b2f,#ff6b35);border-radius:99px"></div>
-      </div>
-    </div>
       <div class="stat"><div class="num">${stats.streak}</div><div class="lbl">Streak</div></div>
       <div class="stat"><div class="num">${stats.total}</div><div class="lbl">All-time</div></div>
     </div>
@@ -1985,9 +1942,9 @@ function renderProfile() {
       <h3>${isPro ? 'Pro' : 'Free'} plan</h3>
       <p class="muted mb">${isPro
         ? 'Full library, cloud history, comparisons, and friends challenges.'
-        : 'Free: guided workouts + history on this device. Pro: full library, sync, challenges. Billing coming soon — Upgrade unlocks Pro on this account for beta.'}</p>
+        : 'Free: guided workouts + history on this device. Pro ($7/mo): full library, sync, challenges + more.'}</p>
       ${!isPro
-        ? `<button class="btn primary" data-action="upgrade">Upgrade to Pro (beta)</button>`
+        ? `<button class="btn primary" data-action="upgrade">Upgrade to Pro — $7/mo</button>`
         : `<button class="btn ghost" data-action="downgrade">Manage (demo: switch to Free)</button>`}
       ${signed ? `<button class="btn secondary mt" data-action="sync-now" style="width:100%;margin-top:8px">Sync now</button>` : ''}
     </div>
@@ -2180,31 +2137,13 @@ async function handleAction(action, el) {
     }
     try {
       if (action === 'signup') {
-        const { data, error } = await supabaseClient.auth.signUp({ email, password });
+        const { error } = await supabaseClient.auth.signUp({ email, password });
         if (error) throw error;
-        if (data.session?.user) {
-          currentUser = data.session.user;
-          await applyEntitlements();
-          await ensureProfile();
-          if (msg) msg.textContent = 'Account created — you are signed in.';
-          navigate('home');
-        } else {
-          if (msg) msg.textContent = 'Account created. Check your email to confirm, then Sign In.';
-        }
+        if (msg) msg.textContent = 'Check email to confirm, or try Sign In.';
       } else {
         const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
-        if (error) {
-          const m = (error.message || '').toLowerCase();
-          if (m.includes('confirm') || m.includes('not confirmed')) {
-            if (msg) msg.textContent = 'Confirm your email first, then sign in. (Check inbox/spam.)';
-            return;
-          }
-          throw error;
-        }
+        if (error) throw error;
         currentUser = data.user;
-        await applyEntitlements();
-        await ensureProfile();
-        await pullCloudHistory();
         navigate('home');
       }
     } catch (e) {
@@ -2241,22 +2180,12 @@ async function handleAction(action, el) {
   }
   if (action === 'upgrade') {
     isPro = true; store.set('isPro', true);
-    if (isSignedIn()) {
-      try {
-        await supabaseClient.from('profiles').update({ is_pro: true, updated_at: new Date().toISOString() }).eq('id', currentUser.id);
-      } catch (_) {}
-    }
-    alert('Pro unlocked on this account (beta — billing not charged yet).');
+    alert('Pro unlocked (demo). Full library available.');
     render();
     return;
   }
   if (action === 'downgrade') {
     isPro = false; store.set('isPro', false);
-    if (isSignedIn()) {
-      try {
-        await supabaseClient.from('profiles').update({ is_pro: false, updated_at: new Date().toISOString() }).eq('id', currentUser.id);
-      } catch (_) {}
-    }
     render();
     return;
   }
