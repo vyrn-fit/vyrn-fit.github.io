@@ -363,6 +363,14 @@ function preloadGuideSlug(slug) {
 }
 
 /** Preload current + next N exercises in an active workout */
+
+function preloadPopularGuides() {
+  try {
+    const free = Object.values(WORKOUTS).filter((w) => w.free).slice(0, 4);
+    free.forEach((w) => preloadWorkoutGuides(w, 0, 2));
+  } catch (_) {}
+}
+
 function preloadWorkoutGuides(workout, fromIndex, ahead) {
   if (!workout || !workout.exercises) return;
   const start = Math.max(0, fromIndex | 0);
@@ -1373,11 +1381,16 @@ function renderLogin() {
       <button class="btn secondary" data-action="signup">Create Account</button>
     </div>
     <p id="auth-msg" class="msg"></p>
-    <div class="divider"><span>quick test</span></div>
+    <div class="divider"><span>or try instantly</span></div>
     <div class="btn-stack" style="max-width:340px;margin-top:0">
-      <button class="btn secondary" data-action="demo-free">Demo Free user</button>
-      <button class="btn secondary" data-action="demo-pro">Demo Pro user</button>
-      <button class="btn secondary" data-action="demo-pro2">Demo Pro 2</button>
+      <button class="btn secondary" data-action="guest">Continue as guest</button>
+      <details class="demo-details" style="margin-top:8px;text-align:left">
+        <summary class="muted" style="cursor:pointer;font-size:12px;list-style:none;text-align:center">Test accounts</summary>
+        <div class="btn-stack" style="margin-top:8px">
+          <button class="btn secondary" data-action="demo-free">Demo Free</button>
+          <button class="btn secondary" data-action="demo-pro">Demo Pro</button>
+        </div>
+      </details>
       <button class="btn ghost" data-go="welcome">← Back</button>
     </div>
   </div>`;
