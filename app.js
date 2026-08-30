@@ -933,6 +933,74 @@ function lastSameWorkout(workoutId) {
   return history.length ? history[history.length - 1] : null;
 }
 
+/** Merge cloud workout rows into local history (dedupe by cloudId or title+time). */
+function mergeCloudHistory(rows) {
+  if (!rows || !rows.length) return 0;
+  const history = getHistory();
+  const existingIds = new Set(history.map(h => h.cloudId).filter(Boolean));
+  const existingKeys = new Set(history.map(h => `${h.title}|${h.duration}|${h.date}`));
+  let added = 0;
+  rows.forEach((r) => {
+    if (r.id && existingIds.has(r.id)) return;
+    const date = (r.completed_at || r.created_at || '').slice(0, 10) || todayKey();
+    const key = `${r.title}|${r.duration_seconds || 0}|${date}`;
+    if (existingKeys.has(key)) return;
+    history.push({
+      cloudId: r.id,
+      title: r.title || 'Workout',
+      workoutId: r.workout_id || null,
+      duration: r.duration_seconds || 0,
+      totalReps: r.total_reps || 0,
+      exercises: r.exercises || [],
+      date,
+      completedAt: r.completed_at || r.created_at
+    });
+    if (r.id) existingIds.add(r.id);
+    existingKeys.add(key);
+    added++;
+  });
+  if (added) {
+    history.sort((a, b) => String(a.completedAt || a.date).localeCompare(String(b.completedAt || b.date)));
+    store.set('history', history);
+    // recompute streak
+    const dates = [...new Set(history.map(h => h.date))].sort();
+    let streak = dates.length ? 1 : 0;
+    for (let i = dates.length - 1; i > 0; i--) {
+      const diff = (new Date(dates[i]) - new Date(dates[i - 1])) / 86400000;
+      if (diff <= 1.5) streak++; else break;
+    }
+    store.set('streak', streak);
+  }
+  return added;
+}
+
+async function pullCloudHistory() {
+  if (!isSignedIn()) return { added: 0 };
+  try {
+    const { data, error } = await supabaseClient
+      .from('workouts')
+      .select('id, title, workout_id, duration_seconds, total_reps, exercises, completed_at, created_at')
+      .eq('user_id', currentUser.id)
+      .order('completed_at', { ascending: false })
+      .limit(100);
+    if (error) throw error;
+    const added = mergeCloudHistory(data || []);
+    store.set('lastSyncAt', new Date().toISOString());
+    return { added, total: (data || []).length };
+  } catch (e) {
+    console.warn('pullCloudHistory', e.message || e);
+    return { added: 0, error: e.message || String(e) };
+  }
+}
+
+async function syncNow() {
+  await ensureProfile();
+  const result = await pullCloudHistory();
+  await refreshSocial();
+  return result;
+}
+
+
 async function saveWorkoutSession(session) {
   const history = getHistory();
   history.push(session);
@@ -957,8 +1025,17 @@ async function saveWorkoutSession(session) {
         exercises: session.exercises || [],
         completed_at: new Date().toISOString()
       };
-      const { error } = await supabaseClient.from('workouts').insert(row);
+      const { data: saved, error } = await supabaseClient.from('workouts').insert(row).select('id').single();
       if (error) throw error;
+      if (saved?.id) {
+        const hist = getHistory();
+        const last = hist[hist.length - 1];
+        if (last && !last.cloudId) {
+          last.cloudId = saved.id;
+          store.set('history', hist);
+        }
+      }
+      store.set('lastSyncAt', new Date().toISOString());
       await postActivity('session_complete', {
         title: session.title,
         duration: session.duration,
@@ -1006,14 +1083,13 @@ async function postActivity(kind, payload) {
 async function ensureProfile() {
   if (!isSignedIn()) return;
   try {
-    const { data } = await supabaseClient.from('profiles').select('id').eq('id', currentUser.id).maybeSingle();
-    if (!data) {
-      await supabaseClient.from('profiles').insert({
-        id: currentUser.id,
-        full_name: displayName(),
-        display_name: displayName()
-      });
-    }
+    const name = displayName();
+    await supabaseClient.from('profiles').upsert({
+      id: currentUser.id,
+      full_name: name,
+      display_name: name,
+      updated_at: new Date().toISOString()
+    }, { onConflict: 'id' });
   } catch (e) {
     console.warn('profile', e.message || e);
   }
@@ -1153,6 +1229,17 @@ async function joinChallengeByCode(code) {
 
 async function submitChallengeTime(challengeId, scoreSeconds, notes) {
   if (!isSignedIn()) throw new Error('Sign in required');
+  const { data: existing } = await supabaseClient
+    .from('challenge_entries')
+    .select('id, score_seconds')
+    .eq('challenge_id', challengeId)
+    .eq('user_id', currentUser.id)
+    .maybeSingle();
+  if (existing && existing.score_seconds != null && existing.score_seconds <= scoreSeconds) {
+    // Keep better (lower) time — do not overwrite with a slower run
+    await loadLeaderboard(challengeId);
+    return { kept: existing.score_seconds, improved: false };
+  }
   const { error } = await supabaseClient.from('challenge_entries').upsert({
     challenge_id: challengeId,
     user_id: currentUser.id,
@@ -1166,6 +1253,7 @@ async function submitChallengeTime(challengeId, scoreSeconds, notes) {
     scoreSeconds,
     title: socialCache.activeChallenge?.title || 'Challenge'
   });
+  return { kept: scoreSeconds, improved: true };
 }
 
 function formatActivity(a) {
@@ -1257,7 +1345,7 @@ async function init() {
   }
   if (currentUser && !currentUser.isGuest) {
     currentScreen = currentScreen === 'welcome' ? 'home' : currentScreen;
-    ensureProfile().then(() => refreshSocial());
+    ensureProfile().then(() => Promise.all([refreshSocial(), pullCloudHistory()])).then(() => { if (currentScreen === 'home' || currentScreen === 'profile') render(); });
     if (pendingJoinCode) {
       currentScreen = 'challenge';
     }
@@ -1627,7 +1715,7 @@ function renderChallenge() {
       <p class="muted mb" style="font-size:13px">Pick a workout, get a share link, invite friends.</p>
       <label class="muted" style="font-size:12px">Workout</label>
       <select id="create-workout" class="input mb">
-        ${freeWorkouts.map(w => `<option value="${w.id}">${w.title} · ${w.durationLabel}</option>`).join('')}
+        ${(isPro ? Object.values(WORKOUTS) : freeWorkouts).map(w => `<option value="${w.id}">${w.title} · ${w.durationLabel}${!w.free ? ' · Pro' : ''}</option>`).join('')}
       </select>
       <label class="muted" style="font-size:12px">Days open</label>
       <select id="create-days" class="input mb">
@@ -1678,40 +1766,73 @@ function renderChallengeDetail() {
   const board = socialCache.board || [];
   const signed = isSignedIn();
   const link = c.invite_code ? inviteLink(c.invite_code) : '';
+  const now = Date.now();
+  const end = c.end_date ? new Date(c.end_date).getTime() : 0;
+  const start = c.start_date ? new Date(c.start_date).getTime() : 0;
+  const expired = end && now > end;
+  const notStarted = start && now < start;
+  const daysLeft = end ? Math.max(0, Math.ceil((end - now) / 86400000)) : null;
+  const myRow = board.find(r => r.user_id === currentUser?.id);
+  const entries = board.length;
+  const statusLine = expired
+    ? 'Closed'
+    : notStarted
+      ? 'Starts ' + new Date(c.start_date).toLocaleDateString()
+      : (daysLeft != null ? (daysLeft === 0 ? 'Ends today' : daysLeft + ' day' + (daysLeft === 1 ? '' : 's') + ' left') : 'Open');
+  const workoutMeta = c.workout_id && WORKOUTS[c.workout_id] ? WORKOUTS[c.workout_id] : null;
   return `<div class="screen fade-in">
     <div class="topbar">
       <button class="back" data-go="challenge">←</button>
       <h2>${c.title}</h2>
     </div>
-    <p class="muted mb">${c.description || ''}</p>
+    <div class="stats mb">
+      <div class="stat"><div class="num" style="font-size:16px">${statusLine}</div><div class="lbl">Status</div></div>
+      <div class="stat"><div class="num">${entries}</div><div class="lbl">Entries</div></div>
+      <div class="stat"><div class="num">${myRow ? '#' + myRow.rank : '—'}</div><div class="lbl">Your rank</div></div>
+    </div>
+    <p class="muted mb">${c.description || 'Friends challenge · best time wins · honor system.'}</p>
+    ${myRow ? `<div class="card highlight mb"><p><strong>Your best</strong> · ${formatTime(myRow.score_seconds)}</p>
+      <p class="muted" style="font-size:12px">Only faster times replace your score.</p></div>` : ''}
     <div class="card mb">
       <p class="muted" style="font-size:12px">Invite code</p>
-      <p><strong style="letter-spacing:0.08em">${c.invite_code || '—'}</strong></p>
-      ${link ? `<p class="muted" style="font-size:12px;word-break:break-all">${link}</p>
-      <div class="btn-stack">
+      <p><strong style="letter-spacing:0.12em;font-size:1.25rem">${c.invite_code || '—'}</strong></p>
+      ${c.end_date ? `<p class="muted" style="font-size:12px">Ends ${new Date(c.end_date).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>` : ''}
+      ${workoutMeta ? `<p class="muted" style="font-size:12px">Based on ${workoutMeta.title} · ${workoutMeta.durationLabel} · ${workoutMeta.place}</p>` : ''}
+      ${link ? `<p class="muted" style="font-size:11px;word-break:break-all;margin-top:8px">${link}</p>
+      <div class="btn-stack" style="margin-top:8px">
         <button class="btn secondary" data-action="copy-invite">Copy link</button>
         <button class="btn secondary" data-action="share-invite">Share</button>
+        <button class="btn ghost" data-action="copy-code">Copy code</button>
       </div>` : ''}
     </div>
     <div class="card mb">
+      <h3>Rules</h3>
+      <ul class="muted" style="font-size:13px;padding-left:18px;line-height:1.5">
+        <li>Complete the full circuit in one run</li>
+        <li>Lower total time ranks higher</li>
+        <li>Friends honor system — race fair</li>
+        <li>You can re-race; only your best time counts</li>
+      </ul>
+    </div>
+    <div class="card mb">
       <h3>Circuit</h3>
-      ${(c.exercise_list || []).map(e =>
-        `<div class="ex-item"><span class="ex-item-text"><strong>${e.name}</strong></span>
-         <span class="muted">${e.reps ? e.reps + ' reps' : (e.duration_seconds || e.duration || '') + 's'}</span></div>`
-      ).join('')}
+      ${(c.exercise_list || []).map((e, i) =>
+        `<div class="ex-item"><span class="ex-item-text"><strong>${i + 1}. ${e.name}</strong></span>
+         <span class="muted">${e.reps ? e.reps + ' reps' : ((e.duration_seconds || e.duration || '') + 's')}</span></div>`
+      ).join('') || '<p class="muted">No exercises listed.</p>'}
     </div>
     <div class="card mb">
       <h3>Leaderboard</h3>
-      <p class="muted mb" style="font-size:12px">Best time · lower ranks higher · friends honor system</p>
+      <p class="muted mb" style="font-size:12px">Best time · lower is better</p>
       ${board.length ? board.map(r => `
         <div class="board-row ${r.user_id === currentUser?.id ? 'me' : ''}">
           <span class="board-rank">#${r.rank}</span>
-          <span class="board-name">${r.name}</span>
+          <span class="board-name">${r.name}${r.user_id === currentUser?.id ? ' · you' : ''}</span>
           <span class="board-score">${formatTime(r.score_seconds)}</span>
         </div>`).join('') : '<p class="muted">No times yet — be first.</p>'}
     </div>
     <div class="btn-stack">
-      <button class="btn primary" data-action="run-challenge" ${signed?'':'disabled'}>Race it</button>
+      <button class="btn primary" data-action="run-challenge" ${signed && !expired ? '' : 'disabled'}>${expired ? 'Challenge closed' : (myRow ? 'Race again' : 'Race it')}</button>
       <button class="btn ghost" data-go="challenge">Back</button>
     </div>
   </div>`;
@@ -1740,20 +1861,26 @@ function renderChallengeRun() {
 
 function renderProfile() {
   const stats = getStats();
+  const signed = isSignedIn();
+  const lastSync = store.get('lastSyncAt');
+  const syncLabel = signed
+    ? (lastSync ? 'Synced · ' + new Date(lastSync).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Signed in · sync on')
+    : 'Local only · sign in to sync across devices';
   return `<div class="screen fade-in">
     <div class="center mb">
       <div class="avatar">${(currentUser?.email?.[0] || 'V').toUpperCase()}</div>
       <p class="muted">${currentUser?.email || 'Guest'}</p>
-      ${currentUser?.isGuest ? '<p class="muted" style="font-size:12px">Local only — sign in to sync</p>' : ''}
+      <p class="muted" style="font-size:12px">${syncLabel}</p>
     </div>
     <div class="card">
       <h3>${isPro ? 'Pro' : 'Free'} plan</h3>
       <p class="muted mb">${isPro
-        ? 'Full library, unlimited history, comparisons.'
+        ? 'Full library, cloud history, comparisons, and friends challenges.'
         : 'Free: guided workouts + history on this device. Pro ($7/mo): full library, sync, challenges + more.'}</p>
       ${!isPro
         ? `<button class="btn primary" data-action="upgrade">Upgrade to Pro — $7/mo</button>`
         : `<button class="btn ghost" data-action="downgrade">Manage (demo: switch to Free)</button>`}
+      ${signed ? `<button class="btn secondary mt" data-action="sync-now" style="width:100%;margin-top:8px">Sync now</button>` : ''}
     </div>
     <div class="card">
       <h3>Coach</h3>
@@ -1966,6 +2093,24 @@ async function handleAction(action, el) {
     return;
   }
 
+  if (action === 'sync-now') {
+    if (!isSignedIn()) { navigate('login'); return; }
+    try {
+      const r = await syncNow();
+      alert(r.error ? ('Sync issue: ' + r.error) : ('Synced · ' + (r.added || 0) + ' new session' + ((r.added===1)?'':'s') + ' from cloud'));
+      render();
+    } catch (e) {
+      alert(e.message || 'Sync failed');
+    }
+    return;
+  }
+  if (action === 'copy-code') {
+    const code = socialCache.activeChallenge?.invite_code;
+    if (!code) return;
+    try { await navigator.clipboard.writeText(code); alert('Code copied: ' + code); }
+    catch { alert(code); }
+    return;
+  }
   if (action === 'upgrade') {
     isPro = true; store.set('isPro', true);
     alert('Pro unlocked (demo). Full library available.');
