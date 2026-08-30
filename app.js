@@ -1750,7 +1750,7 @@ function renderProfile() {
       <h3>${isPro ? 'Pro' : 'Free'} plan</h3>
       <p class="muted mb">${isPro
         ? 'Full library, unlimited history, comparisons.'
-        : 'Free: 4 core workouts, history on this device. Pro ($7/mo): full library + more.'}</p>
+        : 'Free: guided workouts + history on this device. Pro ($7/mo): full library, sync, challenges + more.'}</p>
       ${!isPro
         ? `<button class="btn primary" data-action="upgrade">Upgrade to Pro — $7/mo</button>`
         : `<button class="btn ghost" data-action="downgrade">Manage (demo: switch to Free)</button>`}
