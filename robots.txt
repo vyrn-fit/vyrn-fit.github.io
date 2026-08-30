@@ -1,2 +1,3 @@
 User-agent: *
 Allow: /
+Sitemap: https://vyrn-fit.github.io/sitemap.xml
