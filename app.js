@@ -1537,7 +1537,7 @@ function renderLogin() {
     <div class="divider"><span>or email</span></div>
     <div class="form">
       <input id="email" type="email" placeholder="Email" autocomplete="email" />
-      <input id="password" type="password" placeholder="Password (min 6)" autocomplete="current-password" />
+      <input id="password" type="password" placeholder="Password (min 8)" autocomplete="current-password" />
       <button class="btn primary" data-action="signin">Sign In</button>
       <button class="btn secondary" data-action="signup">Create Account</button>
     </div>
@@ -2135,6 +2135,7 @@ async function handleAction(action, el) {
     const email = $('#email')?.value?.trim();
     const password = $('#password')?.value;
     if (!email || !password) { if (msg) msg.textContent = 'Fill in all fields'; return; }
+    if (password.length < 8) { if (msg) msg.textContent = 'Password must be at least 8 characters'; return; }
     if (!supabaseClient) {
       store.set('guest', { email });
       currentUser = { id: 'local', email, isGuest: true };
