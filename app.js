@@ -176,8 +176,8 @@ const WG_CDN = 'https://cdn.jsdelivr.net/npm/@bryllim/workout-guide@1.0.0/assets
 
 const EXERCISE_GUIDE = {
   "Air Squats": { type: "cdn", key: "bodyweight-squat" },
-  "Ankle rocks": { type: "custom", key: "ankle" },
-  "Arm circles": { type: "custom", key: "arm_circle" },
+  "Ankle rocks": { type: "cdn", key: "toe-touch" },
+  "Arm circles": { type: "cdn", key: "arm-circles" },
   "Bench dips": { type: "cdn", key: "chair-dip" },
   "Bench sit-to-stand": { type: "cdn", key: "bodyweight-squat" },
   "Bench step-ups": { type: "cdn", key: "step-up" },
@@ -185,20 +185,20 @@ const EXERCISE_GUIDE = {
   "Bodyweight squats": { type: "cdn", key: "bodyweight-squat" },
   "Broad jumps (or long steps)": { type: "cdn", key: "jump-squat" },
   "Burpees": { type: "cdn", key: "burpee" },
-  "Calf raises": { type: "custom", key: "calf" },
-  "Calf raises on curb": { type: "custom", key: "calf" },
-  "Chin tucks": { type: "custom", key: "chin_tuck" },
+  "Calf raises": { type: "cdn", key: "bodyweight-squat" },
+  "Calf raises on curb": { type: "cdn", key: "bodyweight-squat" },
+  "Chin tucks": { type: "cdn", key: "arm-circles" },
   "Cool-down stretch": { type: "cdn", key: "worlds-greatest-stretch" },
-  "Cool-down walk": { type: "custom", key: "walk_place" },
-  "Cool-down walk in place": { type: "custom", key: "walk_place" },
+  "Cool-down walk": { type: "cdn", key: "high-knees" },
+  "Cool-down walk in place": { type: "cdn", key: "high-knees" },
   "Dead bugs": { type: "cdn", key: "dead-bug" },
-  "Dead hangs or scap pulls": { type: "custom", key: "scap_squeeze" },
+  "Dead hangs or scap pulls": { type: "cdn", key: "reverse-snow-angel" },
   "Deep squat hold": { type: "cdn", key: "bodyweight-squat" },
   "Desk chair sit-to-stand": { type: "cdn", key: "bodyweight-squat" },
   "Diamond or narrow push-ups": { type: "cdn", key: "diamond-push-up" },
   "Easy breathing stretch": { type: "cdn", key: "worlds-greatest-stretch" },
-  "Easy jog / walk lap": { type: "custom", key: "walk_place" },
-  "Easy jog warm-up": { type: "custom", key: "walk_place" },
+  "Easy jog / walk lap": { type: "cdn", key: "high-knees" },
+  "Easy jog warm-up": { type: "cdn", key: "high-knees" },
   "Easy stretch flow": { type: "cdn", key: "worlds-greatest-stretch" },
   "Easy stretch on grass": { type: "cdn", key: "worlds-greatest-stretch" },
   "Gentle side lunges": { type: "cdn", key: "lateral-lunge" },
@@ -207,7 +207,7 @@ const EXERCISE_GUIDE = {
   "Hamstring fold": { type: "cdn", key: "toe-touch" },
   "High knees": { type: "cdn", key: "high-knees" },
   "High knees (or marches)": { type: "cdn", key: "high-knees" },
-  "Hip circles": { type: "custom", key: "hip_circle" },
+  "Hip circles": { type: "cdn", key: "arm-circles" },
   "Hip flexor stretch L": { type: "cdn", key: "kneeling-hip-flexor-stretch" },
   "Hip flexor stretch R": { type: "cdn", key: "kneeling-hip-flexor-stretch" },
   "Hollow hold (or tuck)": { type: "cdn", key: "hollow-body-hold" },
@@ -223,7 +223,7 @@ const EXERCISE_GUIDE = {
   "March or jog in place": { type: "cdn", key: "high-knees" },
   "Mountain Climbers": { type: "cdn", key: "mountain-climber" },
   "Mountain climbers": { type: "cdn", key: "mountain-climber" },
-  "Neck & shoulder rolls": { type: "custom", key: "neck_shoulder" },
+  "Neck & shoulder rolls": { type: "cdn", key: "arm-circles" },
   "Park-bench step-ups": { type: "cdn", key: "step-up" },
   "Pike push-ups (or wall)": { type: "cdn", key: "pike-push-up" },
   "Plank": { type: "cdn", key: "plank" },
@@ -235,31 +235,31 @@ const EXERCISE_GUIDE = {
   "Reverse lunges": { type: "cdn", key: "reverse-lunge" },
   "Reverse tabletop holds": { type: "cdn", key: "glute-bridge" },
   "Seated cat-cow": { type: "cdn", key: "cat-cow-stretch" },
-  "Seated thoracic openers": { type: "custom", key: "thoracic" },
-  "Seated torso twists": { type: "custom", key: "seated_twist" },
-  "Shoulder CARs slow": { type: "custom", key: "scap_squeeze" },
-  "Shoulder blade squeezes": { type: "custom", key: "scap_squeeze" },
+  "Seated thoracic openers": { type: "cdn", key: "torso-twist-stretch" },
+  "Seated torso twists": { type: "cdn", key: "russian-twist" },
+  "Shoulder CARs slow": { type: "cdn", key: "arm-circles" },
+  "Shoulder blade squeezes": { type: "cdn", key: "reverse-snow-angel" },
   "Shoulder taps in plank": { type: "cdn", key: "plank-shoulder-tap" },
   "Side plank (left)": { type: "cdn", key: "side-plank" },
   "Side plank (right)": { type: "cdn", key: "side-plank" },
   "Single-leg glute bridge L": { type: "cdn", key: "glute-bridge" },
   "Single-leg glute bridge R": { type: "cdn", key: "glute-bridge" },
   "Slow mountain climbers": { type: "cdn", key: "mountain-climber" },
-  "Slow neck rolls": { type: "custom", key: "neck_shoulder" },
-  "Sprint or fast walk intervals": { type: "custom", key: "walk_place" },
+  "Slow neck rolls": { type: "cdn", key: "arm-circles" },
+  "Sprint or fast walk intervals": { type: "cdn", key: "high-knees" },
   "Squat jumps (or squats)": { type: "cdn", key: "jump-squat" },
   "Squat pulses": { type: "cdn", key: "bodyweight-squat" },
   "Squats": { type: "cdn", key: "bodyweight-squat" },
-  "Standing chest opener": { type: "custom", key: "chest_open" },
-  "Standing hip circles": { type: "custom", key: "hip_circle" },
+  "Standing chest opener": { type: "cdn", key: "torso-twist-stretch" },
+  "Standing hip circles": { type: "cdn", key: "arm-circles" },
   "Standing marches": { type: "cdn", key: "high-knees" },
-  "Standing side bends": { type: "custom", key: "side_bend" },
+  "Standing side bends": { type: "cdn", key: "torso-twist-stretch" },
   "Standing toe reaches": { type: "cdn", key: "toe-touch" },
   "Stretch & breathe": { type: "cdn", key: "worlds-greatest-stretch" },
   "Sumo squats": { type: "cdn", key: "bodyweight-squat" },
   "Superman holds": { type: "cdn", key: "superman" },
-  "Thoracic rotations": { type: "custom", key: "thoracic" },
-  "Walk the perimeter": { type: "custom", key: "walk_place" },
+  "Thoracic rotations": { type: "cdn", key: "torso-twist-stretch" },
+  "Walk the perimeter": { type: "cdn", key: "high-knees" },
   "Walking Lunges": { type: "cdn", key: "walking-lunge" },
   "Walking lunges": { type: "cdn", key: "walking-lunge" },
   "Wall push-ups": { type: "cdn", key: "wall-push-up" },
@@ -301,13 +301,7 @@ const WG_SAFE = new Set([
 ]);
 
 function customKey(name) {
-  const g = EXERCISE_GUIDE[name] || EXERCISE_GUIDE[(name || '').trim()];
-  if (g && g.type === 'custom') return g.key;
-  // fuzzy fallback for slight name variants
-  const n = (name || '').toLowerCase();
-  for (const [k, v] of Object.entries(EXERCISE_GUIDE)) {
-    if (k.toLowerCase() === n && v.type === 'custom') return v.key;
-  }
+  // Stick SVG path disabled — all exercises use CDN line-art
   return null;
 }
 
@@ -455,27 +449,34 @@ function prVideoUrl(name) { return null; }
 function prDemoHtml(name) { return null; }
 
 function wgDemoHtml(name, opts = {}) {
+  // Always prefer professional CDN line-art — no stick SVG
   const g = EXERCISE_GUIDE[name] || null;
-  const ck = (g && g.type === 'custom') ? g.key : customKey(name);
-  if (ck) return customDemoHtml(name, ck);
-
-  const slug = (g && g.type === 'cdn') ? g.key : wgSlug(name);
-  const banned = new Set(['walking','running','standing-calf-raise','calf-raise','dumbbell-side-bend','band-pull-apart','active-hang','dead-hang','seated-calf-raise']);
-  const safeSlug = banned.has(slug) ? 'bodyweight-squat' : slug;
+  let slug = (g && g.type === 'cdn') ? g.key : wgSlug(name);
+  // Hard ban equipment / treadmill CDN packs
+  const banned = new Set([
+    'walking','running','standing-calf-raise','calf-raise','dumbbell-side-bend',
+    'band-pull-apart','active-hang','dead-hang','seated-calf-raise'
+  ]);
+  if (banned.has(slug)) slug = 'high-knees';
+  if (!slug) slug = 'bodyweight-squat';
 
   const labels = ['Setup', 'Move', 'Finish'];
   const strip = [1, 2, 3].map((n) => `
     <div class="wg-cell">
       <div class="wg-cell-frame">
-        <img src="${wgFrameUrl(safeSlug, n)}" alt="${labels[n - 1]}" decoding="async" />
+        <img src="${wgFrameUrl(slug, n)}" alt="${labels[n - 1]}" decoding="async"
+          onerror="this.onerror=null;this.src='${wgFrameUrl('bodyweight-squat', n)}'" />
       </div>
       <span class="wg-label">${labels[n - 1]}</span>
     </div>`).join('');
-  return `<div class="wg-demo" data-wg="${safeSlug}" role="img" aria-label="Form guide for ${name}">
+  return `<div class="wg-demo" data-wg="${slug}" role="img" aria-label="Form guide for ${name}">
     <div class="wg-stage wg-stage-hero">
-      <img class="wg-frame f1" src="${wgFrameUrl(safeSlug, 1)}" alt="" decoding="async" onerror="this.onerror=null;this.src='${wgFrameUrl('bodyweight-squat', 1)}'" />
-      <img class="wg-frame f2" src="${wgFrameUrl(safeSlug, 2)}" alt="" decoding="async" onerror="this.onerror=null;this.src='${wgFrameUrl('bodyweight-squat', 2)}'" />
-      <img class="wg-frame f3" src="${wgFrameUrl(safeSlug, 3)}" alt="" decoding="async" onerror="this.onerror=null;this.src='${wgFrameUrl('bodyweight-squat', 3)}'" />
+      <img class="wg-frame f1" src="${wgFrameUrl(slug, 1)}" alt="" decoding="async"
+        onerror="this.onerror=null;this.src='${wgFrameUrl('bodyweight-squat', 1)}'" />
+      <img class="wg-frame f2" src="${wgFrameUrl(slug, 2)}" alt="" decoding="async"
+        onerror="this.onerror=null;this.src='${wgFrameUrl('bodyweight-squat', 2)}'" />
+      <img class="wg-frame f3" src="${wgFrameUrl(slug, 3)}" alt="" decoding="async"
+        onerror="this.onerror=null;this.src='${wgFrameUrl('bodyweight-squat', 3)}'" />
       <div class="wg-glow"></div>
     </div>
     <div class="wg-strip" aria-hidden="true">${strip}</div>
