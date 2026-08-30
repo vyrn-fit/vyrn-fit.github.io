@@ -183,7 +183,7 @@ const WG_CDN = WG_CDN_BASES[0];
 
 const EXERCISE_GUIDE = {
   "Air Squats": { type: "cdn", key: "bodyweight-squat" },
-  "Ankle rocks": { type: "cdn", key: "toe-touch" },
+  "Ankle rocks": { type: "cdn", key: "high-knees" },
   "Arm circles": { type: "cdn", key: "arm-circles" },
   "Bench dips": { type: "cdn", key: "chair-dip" },
   "Bench sit-to-stand": { type: "cdn", key: "bodyweight-squat" },
@@ -192,14 +192,14 @@ const EXERCISE_GUIDE = {
   "Bodyweight squats": { type: "cdn", key: "bodyweight-squat" },
   "Broad jumps (or long steps)": { type: "cdn", key: "jump-squat" },
   "Burpees": { type: "cdn", key: "burpee" },
-  "Calf raises": { type: "cdn", key: "bodyweight-squat" },
-  "Calf raises on curb": { type: "cdn", key: "bodyweight-squat" },
-  "Chin tucks": { type: "cdn", key: "arm-circles" },
+  "Calf raises": { type: "cdn", key: "wall-sit" },
+  "Calf raises on curb": { type: "cdn", key: "step-up" },
+  "Chin tucks": { type: "cdn", key: "reverse-snow-angel" },
   "Cool-down stretch": { type: "cdn", key: "worlds-greatest-stretch" },
   "Cool-down walk": { type: "cdn", key: "high-knees" },
   "Cool-down walk in place": { type: "cdn", key: "high-knees" },
   "Dead bugs": { type: "cdn", key: "dead-bug" },
-  "Dead hangs or scap pulls": { type: "cdn", key: "reverse-snow-angel" },
+  "Dead hangs or scap pulls": { type: "cdn", key: "band-pull-apart" },
   "Deep squat hold": { type: "cdn", key: "bodyweight-squat" },
   "Desk chair sit-to-stand": { type: "cdn", key: "bodyweight-squat" },
   "Diamond or narrow push-ups": { type: "cdn", key: "diamond-push-up" },
@@ -214,7 +214,7 @@ const EXERCISE_GUIDE = {
   "Hamstring fold": { type: "cdn", key: "toe-touch" },
   "High knees": { type: "cdn", key: "high-knees" },
   "High knees (or marches)": { type: "cdn", key: "high-knees" },
-  "Hip circles": { type: "cdn", key: "arm-circles" },
+  "Hip circles": { type: "cdn", key: "worlds-greatest-stretch" },
   "Hip flexor stretch L": { type: "cdn", key: "kneeling-hip-flexor-stretch" },
   "Hip flexor stretch R": { type: "cdn", key: "kneeling-hip-flexor-stretch" },
   "Hollow hold (or tuck)": { type: "cdn", key: "hollow-body-hold" },
@@ -230,7 +230,7 @@ const EXERCISE_GUIDE = {
   "March or jog in place": { type: "cdn", key: "high-knees" },
   "Mountain Climbers": { type: "cdn", key: "mountain-climber" },
   "Mountain climbers": { type: "cdn", key: "mountain-climber" },
-  "Neck & shoulder rolls": { type: "cdn", key: "arm-circles" },
+  "Neck & shoulder rolls": { type: "cdn", key: "reverse-snow-angel" },
   "Park-bench step-ups": { type: "cdn", key: "step-up" },
   "Pike push-ups (or wall)": { type: "cdn", key: "pike-push-up" },
   "Plank": { type: "cdn", key: "plank" },
@@ -242,25 +242,25 @@ const EXERCISE_GUIDE = {
   "Reverse lunges": { type: "cdn", key: "reverse-lunge" },
   "Reverse tabletop holds": { type: "cdn", key: "glute-bridge" },
   "Seated cat-cow": { type: "cdn", key: "cat-cow-stretch" },
-  "Seated thoracic openers": { type: "cdn", key: "torso-twist-stretch" },
+  "Seated thoracic openers": { type: "cdn", key: "cat-cow-stretch" },
   "Seated torso twists": { type: "cdn", key: "russian-twist" },
   "Shoulder CARs slow": { type: "cdn", key: "arm-circles" },
-  "Shoulder blade squeezes": { type: "cdn", key: "reverse-snow-angel" },
+  "Shoulder blade squeezes": { type: "cdn", key: "face-pull" },
   "Shoulder taps in plank": { type: "cdn", key: "plank-shoulder-tap" },
   "Side plank (left)": { type: "cdn", key: "side-plank" },
   "Side plank (right)": { type: "cdn", key: "side-plank" },
   "Single-leg glute bridge L": { type: "cdn", key: "glute-bridge" },
   "Single-leg glute bridge R": { type: "cdn", key: "glute-bridge" },
   "Slow mountain climbers": { type: "cdn", key: "mountain-climber" },
-  "Slow neck rolls": { type: "cdn", key: "arm-circles" },
+  "Slow neck rolls": { type: "cdn", key: "reverse-snow-angel" },
   "Sprint or fast walk intervals": { type: "cdn", key: "high-knees" },
   "Squat jumps (or squats)": { type: "cdn", key: "jump-squat" },
   "Squat pulses": { type: "cdn", key: "bodyweight-squat" },
   "Squats": { type: "cdn", key: "bodyweight-squat" },
-  "Standing chest opener": { type: "cdn", key: "torso-twist-stretch" },
-  "Standing hip circles": { type: "cdn", key: "arm-circles" },
+  "Standing chest opener": { type: "cdn", key: "doorway-chest-stretch" },
+  "Standing hip circles": { type: "cdn", key: "lateral-lunge" },
   "Standing marches": { type: "cdn", key: "high-knees" },
-  "Standing side bends": { type: "cdn", key: "torso-twist-stretch" },
+  "Standing side bends": { type: "cdn", key: "lateral-lunge" },
   "Standing toe reaches": { type: "cdn", key: "toe-touch" },
   "Stretch & breathe": { type: "cdn", key: "worlds-greatest-stretch" },
   "Sumo squats": { type: "cdn", key: "bodyweight-squat" },
@@ -361,6 +361,23 @@ function wgPlaceholderDataUri() {
 
 const _wgPreloaded = new Set();
 
+/** UAT: exercises that share art but are not L/R or synonym pairs */
+function auditGuideUniqueness() {
+  const by = {};
+  Object.entries(EXERCISE_GUIDE).forEach(([name, g]) => {
+    if (!g || g.type !== 'cdn') return;
+    (by[g.key] = by[g.key] || []).push(name);
+  });
+  const issues = [];
+  Object.entries(by).forEach(([key, names]) => {
+    if (names.length < 2) return;
+    // allow L/R pairs and near-synonyms
+    const base = names.map(n => n.replace(/\s*[LR]$/i, '').replace(/\s*\(left\)|\s*\(right\)/ig, '').toLowerCase());
+    const unique = [...new Set(base)];
+    if (unique.length >= 2) issues.push({ key, names });
+  });
+  return issues;
+}
 function resolveGuideSlug(name) {
   const g = EXERCISE_GUIDE[name] || null;
   let slug = (g && g.type === 'cdn') ? g.key : (typeof wgSlug === 'function' ? wgSlug(name) : 'bodyweight-squat');
