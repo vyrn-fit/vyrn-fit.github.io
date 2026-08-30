@@ -1,4 +1,4 @@
-const CACHE = 'vyrn-v48';
+const CACHE = 'vyrn-v49';
 const ASSETS = [
   '/',
   '/index.html',
@@ -32,31 +32,33 @@ self.addEventListener('fetch', (e) => {
   if (e.request.method !== 'GET') return;
   const url = new URL(e.request.url);
 
-  // Workout-guide CDN — cache-first (immutable versioned assets)
+  // Workout-guide images: network-first, cache OK responses only (avoid sticky broken cache)
   if (
-    url.hostname === 'cdn.jsdelivr.net' &&
-    url.pathname.includes('@bryllim/workout-guide')
+    (url.hostname === 'cdn.jsdelivr.net' || url.hostname === 'fastly.jsdelivr.net' || url.hostname === 'unpkg.com') &&
+    url.pathname.includes('workout-guide')
   ) {
     e.respondWith(
-      caches.open(CACHE).then((cache) =>
-        cache.match(e.request).then((hit) => {
-          if (hit) return hit;
-          return fetch(e.request, { mode: 'cors' }).then((res) => {
-            if (res && res.status === 200) cache.put(e.request, res.clone());
-            return res;
-          }).catch(() => hit || Response.error());
+      fetch(e.request, { mode: 'cors', credentials: 'omit' })
+        .then((res) => {
+          if (res && res.status === 200) {
+            const copy = res.clone();
+            caches.open(CACHE).then((c) => c.put(e.request, copy));
+          }
+          return res;
         })
-      )
+        .catch(() =>
+          caches.open(CACHE).then((c) =>
+            c.match(e.request).then((hit) => hit || Response.error())
+          )
+        )
     );
     return;
   }
 
-  // Supabase & other third-party — network only (auth/API)
   if (url.origin !== self.location.origin) {
-    return; // default browser fetch
+    return;
   }
 
-  // App shell — network-first so deploys show up quickly
   if (
     url.pathname === '/' ||
     url.pathname === '/index.html' ||
@@ -69,8 +71,7 @@ self.addEventListener('fetch', (e) => {
       fetch(e.request)
         .then((res) => {
           if (res && res.status === 200) {
-            const copy = res.clone();
-            caches.open(CACHE).then((c) => c.put(e.request, copy));
+            caches.open(CACHE).then((c) => c.put(e.request, res.clone()));
           }
           return res;
         })
@@ -79,7 +80,6 @@ self.addEventListener('fetch', (e) => {
     return;
   }
 
-  // Local media — cache-first
   if (url.pathname.match(/\.(mp4|webm|mov|mp3|wav|glb|gltf|png|jpg|jpeg|svg|webp|woff2?)(\?|$)/i)) {
     e.respondWith(
       caches.match(e.request).then((c) => c || fetch(e.request).then((res) => {
