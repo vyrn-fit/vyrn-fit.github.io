@@ -905,11 +905,11 @@ function speak(text, opts) {
     if (voice) u.voice = voice;
     const energetic = opts.energy !== false;
     if (trainerGender === 'male') {
-      u.rate = energetic ? 1.12 : 1.05;
-      u.pitch = energetic ? 0.95 : 1.0;
+      u.rate = energetic ? 1.18 : 1.08;
+      u.pitch = energetic ? 1.0 : 0.98;
     } else {
-      u.rate = energetic ? 1.14 : 1.06;
-      u.pitch = energetic ? 1.12 : 1.05;
+      u.rate = energetic ? 1.2 : 1.1;
+      u.pitch = energetic ? 1.15 : 1.08;
     }
     u.volume = 1;
     window.speechSynthesis.speak(u);
@@ -917,37 +917,66 @@ function speak(text, opts) {
 }
 
 const COACH_LINES = {
+  intro: [
+    function() { return "Yes! You showed up. That already puts you ahead. Let's put in the work — stay with me the whole way!"; },
+    function() { return "I love this energy. Phone down, shoulders back — we're about to move. You've got this!"; },
+    function() { return "Alright, athlete — no half effort today. Breathe in, lock in, and follow my lead!"; }
+  ],
   workReps: [
-    function(n, r) { return "Let's go! " + r + " " + n + ". You've got this!"; },
-    function(n, r) { return "Come on — " + r + " solid " + n + ". Make every rep count!"; },
-    function(n, r) { return "Time to work! " + r + " " + n + ". Push it!"; },
-    function(n, r) { return "Here we go! " + r + " " + n + ". Stay strong!"; }
+    function(n, r) { return "Let's go! " + r + " strong " + n + ". Full range, controlled power — make every single rep count!"; },
+    function(n, r) { return "Come on! " + r + " " + n + " right now. Drive with purpose — I want clean form and real effort!"; },
+    function(n, r) { return "Time to work! " + r + " " + n + ". Don't rush — own each rep. You're stronger than you think!"; },
+    function(n, r) { return "Here we go! " + r + " quality " + n + ". Chest proud, core tight — push it!"; },
+    function(n, r) { return "This is your set! " + r + " " + n + ". Stay present. Feel the muscle. Finish every one!"; },
+    function(n, r) { return "Let's earn it! " + r + " " + n + ". No shortcuts — great form, great effort, great you!"; }
   ],
   workTime: [
-    function(n) { return "Let's go! " + n + ". Stay locked in!"; },
-    function(n) { return "Work time — " + n + ". You've got this!"; },
-    function(n) { return "Come on! " + n + ". Give it everything!"; },
-    function(n) { return "Here we go — " + n + ". Own it!"; }
+    function(n) { return "Let's go! " + n + ". Stay locked in the whole time — breathe and keep quality high!"; },
+    function(n) { return "Work time! " + n + ". You've got this window — fill it with real effort!"; },
+    function(n) { return "Come on! " + n + ". Hold your posture, stay smooth, give me everything you've got!"; },
+    function(n) { return "Here we go — " + n + ". Focus on the movement. You're in control. Own this set!"; },
+    function(n) { return "Yes! " + n + " right now. Strong and steady. I believe in this version of you!"; },
+    function(n) { return "Time to move! " + n + ". Don't coast — stay intentional until the clock hits zero!"; }
+  ],
+  mid: [
+    function() { return "Halfway — stay with it! This is where champions keep form!"; },
+    function() { return "You're in the middle — don't fade! Push through, breathe, keep quality!"; },
+    function() { return "Midway and strong! Dig a little deeper — you've already proven you can start, now finish!"; },
+    function() { return "Keep going! Halfway done. Chest up, core braced — still in the fight!"; }
+  ],
+  form: [
+    function(tip) { return "Coach tip: " + tip; },
+    function(tip) { return "Form check — " + tip; },
+    function(tip) { return "Remember: " + tip + ". Quality over ego!"; }
   ],
   rest: [
-    function() { return "Yes! Rest up. Breathe. You're crushing it."; },
-    function() { return "Nice work! Shake it out. Recover strong."; },
-    function() { return "Great set! Catch your breath — next one's coming."; },
-    function() { return "Beautiful! Rest. Stay loose. You're doing amazing."; }
+    function() { return "Yes! Beautiful work. Rest up, shake it out, breathe deep — recover so the next set is even better!"; },
+    function() { return "Nice! You earned this break. Loosen the shoulders, slow your breath. Stay ready — we're not done yet!"; },
+    function() { return "Great set! Catch your breath. Hydrate if you need. Mentally lock in for what's next!"; },
+    function() { return "That's the standard! Rest smart. Keep moving gently. Your next effort starts soon!"; },
+    function() { return "Outstanding! Recover with intention. You're building something here — be proud, then get set!"; }
   ],
   ready: [
-    function(n) { return "Get ready. " + n + ". Let's make it count!"; },
-    function(n) { return "Next up — " + n + ". Bring the energy!"; }
+    function(n) { return "Get ready! Next up — " + n + ". Set your feet, find your focus, and bring serious energy!"; },
+    function(n) { return "Coming up: " + n + ". Shake out the arms. This is your moment — let's make it count!"; },
+    function(n) { return "On deck — " + n + ". Deep breath in… and out. When we start, you go all in!"; },
+    function(n) { return "Next move: " + n + ". Visualize one perfect rep. Then do it again. Ready when you are!"; }
+  ],
+  ten: [
+    function() { return "Ten seconds — stay tall, stay strong!"; },
+    function() { return "Ten left — don't quit on the finish!"; }
   ],
   five: [
-    function() { return "Five seconds — finish strong!"; },
-    function() { return "Almost there — dig deep!"; },
-    function() { return "Final five — don't quit now!"; }
+    function() { return "Five seconds — finish strong! Empty the tank!"; },
+    function() { return "Final five — dig deep, no quitting now!"; },
+    function() { return "Almost there — five more, give me everything!"; },
+    function() { return "Last five! Pride in every second — finish like it matters!"; }
   ],
   done: [
-    function() { return "Session complete! Outstanding work. Be proud of that."; },
-    function() { return "That's a wrap! You showed up and put in the work. Amazing."; },
-    function() { return "Done! Incredible effort. See you next session."; }
+    function() { return "Session complete! Outstanding work. You showed up and put in the work — be genuinely proud of that!"; },
+    function() { return "That's a wrap! Incredible effort from start to finish. Your future self is already thanking you!"; },
+    function() { return "Done! You didn't negotiate with the couch today. Amazing discipline — see you next session, stronger!"; },
+    function() { return "Finished! That consistency is the real flex. Recover well, eat well, and come back hungry!"; }
   ]
 };
 
@@ -962,16 +991,35 @@ function coachLine(bucket) {
 function speakExerciseStart(ex) {
   var m = exerciseMeta(ex);
   var n = speakForTts(m.name);
-  if (m.reps) speak(coachLine('workReps', n, m.reps));
-  else speak(coachLine('workTime', n));
+  var line = m.reps ? coachLine('workReps', n, m.reps) : coachLine('workTime', n);
+  // Occasionally add a short form cue (keeps coaching denser without always stacking)
+  try {
+    if (Math.random() < 0.55 && typeof formTipFor === 'function') {
+      var tip = formTipFor(ex && ex.name);
+      if (tip && tip.length < 90) line = line + " " + coachLine('form', speakForTts(tip));
+    }
+  } catch (_) {}
+  speak(line);
+  _lastCoachMid = false;
+  _lastCoachTen = false;
+  _lastCoachFive = false;
 }
 
 function speakRest() { speak(coachLine('rest')); }
 function speakDone() { speak(coachLine('done')); }
 function speakReady(ex) {
   var n = speakForTts((ex && ex.name) || 'your first move');
-  speak(coachLine('ready', n));
+  var line = coachLine('ready', n);
+  try {
+    if (typeof formTipFor === 'function') {
+      var tip = formTipFor(ex && ex.name);
+      if (tip && tip.length < 80) line = line + " " + coachLine('form', speakForTts(tip));
+    }
+  } catch (_) {}
+  speak(line);
 }
+function speakIntro() { speak(coachLine('intro')); }
+
 
 function warmVoices() {
   if (!window.speechSynthesis) return;
@@ -2068,6 +2116,8 @@ function bindEvents() {
 function startPhaseTimer() {
   clearInterval(tickTimer);
   _lastCoachFive = false;
+  _lastCoachMid = false;
+  _lastCoachTen = false;
   tickTimer = setInterval(() => {
     phaseSeconds--;
     totalSeconds++;
@@ -2077,9 +2127,21 @@ function startPhaseTimer() {
       if (phaseSeconds <= 5 && phase !== 'ready' && phase !== 'done') el.classList.add('urgent');
       else el.classList.remove('urgent');
     }
-    if (phase === 'work' && phaseSeconds === 5 && !_lastCoachFive) {
-      _lastCoachFive = true;
-      speak(coachLine('five'));
+    if (phase === 'work') {
+      const total = (activeWorkout && activeWorkout.exercises[exerciseIndex] && activeWorkout.exercises[exerciseIndex].duration) || 0;
+      const midAt = total >= 16 ? Math.floor(total / 2) : -1;
+      if (midAt > 6 && phaseSeconds === midAt && !_lastCoachMid) {
+        _lastCoachMid = true;
+        speak(coachLine('mid'));
+      }
+      if (phaseSeconds === 10 && total >= 18 && !_lastCoachTen) {
+        _lastCoachTen = true;
+        speak(coachLine('ten'));
+      }
+      if (phaseSeconds === 5 && !_lastCoachFive) {
+        _lastCoachFive = true;
+        speak(coachLine('five'));
+      }
     }
     if (phaseSeconds === 3 || phaseSeconds === 2 || phaseSeconds === 1) sfxTick();
     if (phaseSeconds <= 0) advancePhase();
@@ -2298,8 +2360,10 @@ async function handleAction(action, el) {
     return;
   }
   if (action === 'preview-coach') {
-    warmVoices();
-    speak("Let's go! Twelve push ups. You've got this! Stay strong!");
+    const sample = trainerGender === 'male'
+      ? "Let's go! I'm your coach today. Stay locked in, push with purpose, and finish every set strong. You've got this!"
+      : "Yes! I'm with you for this session. Breathe, move with intention, and don't leave anything in the tank. Let's put in the work!";
+    speak(sample);
     return;
   }
   if (action === 'toggle-voice') {
@@ -2429,7 +2493,7 @@ async function handleAction(action, el) {
     phaseSeconds = w.exercises[0].duration;
     totalSeconds = 0;
     navigate('workoutRun');
-    setTimeout(() => speakReady(w.exercises[0]), 280);
+    setTimeout(() => { speakIntro(); setTimeout(() => speakReady(w.exercises[0]), 3200); }, 200);
     return;
   }
 
