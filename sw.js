@@ -1,4 +1,4 @@
-const CACHE = 'vyrn-v51';
+const CACHE = 'vyrn-v52';
 const ASSETS = [
   '/',
   '/index.html',
@@ -32,23 +32,7 @@ self.addEventListener('fetch', (e) => {
   if (e.request.method !== 'GET') return;
   const url = new URL(e.request.url);
 
-  // Self-hosted guides — cache-first
-  if (url.origin === self.location.origin && url.pathname.startsWith('/assets/guides/')) {
-    e.respondWith(
-      caches.match(e.request).then((hit) => {
-        if (hit) return hit;
-        return fetch(e.request).then((res) => {
-          if (res && res.status === 200) {
-            caches.open(CACHE).then((c) => c.put(e.request, res.clone()));
-          }
-          return res;
-        });
-      })
-    );
-    return;
-  }
-
-  // External workout-guide CDNs — network-first, cache OK only
+  // Workout-guide images: network-first, cache OK responses only (avoid sticky broken cache)
   if (
     (url.hostname === 'cdn.jsdelivr.net' || url.hostname === 'fastly.jsdelivr.net' || url.hostname === 'unpkg.com') &&
     url.pathname.includes('workout-guide')
@@ -57,18 +41,23 @@ self.addEventListener('fetch', (e) => {
       fetch(e.request, { mode: 'cors', credentials: 'omit' })
         .then((res) => {
           if (res && res.status === 200) {
-            caches.open(CACHE).then((c) => c.put(e.request, res.clone()));
+            const copy = res.clone();
+            caches.open(CACHE).then((c) => c.put(e.request, copy));
           }
           return res;
         })
         .catch(() =>
-          caches.open(CACHE).then((c) => c.match(e.request).then((hit) => hit || Response.error()))
+          caches.open(CACHE).then((c) =>
+            c.match(e.request).then((hit) => hit || Response.error())
+          )
         )
     );
     return;
   }
 
-  if (url.origin !== self.location.origin) return;
+  if (url.origin !== self.location.origin) {
+    return;
+  }
 
   if (
     url.pathname === '/' ||
