@@ -485,7 +485,7 @@ function wgDemoHtml(name, opts = {}) {
       <div class="wg-glow"></div>
     </div>
     <div class="wg-strip" aria-hidden="true">${strip}</div>
-    <p class="wg-credit">Form guide · Setup → Move · Finish</p>
+    <p class="wg-credit">Setup · Move · Finish</p>
   </div>`;
 }
 
@@ -878,105 +878,112 @@ function pickCoachVoice() {
   if (!voices.length) return null;
   const gender = trainerGender === 'male' ? 'male' : 'female';
   const scored = voices.map((v) => {
-    const name = (v.name || '') + ' ' + (v.lang || '');
+    const name = ((v.name || '') + ' ' + (v.lang || '')).toLowerCase();
     let score = 0;
-    if (/en(-|_)?(us|gb|au|nz|ie)/i.test(v.lang || '')) score += 5;
+    if (/en(-|_)?(us|gb|au|nz|ie)/i.test(v.lang || '')) score += 6;
+    // Prefer premium / natural-sounding system voices when present
+    if (/neural|natural|premium|enhanced|google|samantha|karen|moira|tessa|fiona|victoria|susan|zira|siri|aria|jenny|emma|libby/.test(name)) score += 8;
     if (gender === 'female') {
-      if (/female|woman|samantha|karen|moira|susan|zira|victoria|fiona|tessa|google.*female|microsoft.*(zira|susan)/i.test(name)) score += 10;
-      if (/male|david|daniel|alex|fred|mark|google.*male/i.test(name) && !/female/i.test(name)) score -= 8;
+      if (/female|woman|samantha|karen|moira|susan|zira|victoria|fiona|tessa|aria|jenny|emma|libby|siri/.test(name)) score += 12;
+      if (/male|david|daniel|mark|fred|ravi|guy/.test(name) && !/female/.test(name)) score -= 10;
     } else {
-      if (/male|man|david|daniel|alex|fred|mark|ravi|google.*male|microsoft.*(david|mark|guy)/i.test(name) && !/female/i.test(name)) score += 10;
-      if (/female|samantha|karen|zira|susan/i.test(name)) score -= 8;
+      if (/male|man|david|daniel|mark|fred|ravi|guy|alex/.test(name) && !/female/.test(name)) score += 12;
+      if (/female|samantha|karen|zira|victoria|aria/.test(name)) score -= 10;
     }
-    if (/premium|enhanced|neural|natural/i.test(name)) score += 2;
+    // Prefer local voices (often less robotic latency)
+    if (v.localService) score += 3;
     return { v, score };
   });
   scored.sort((a, b) => b.score - a.score);
-  return scored[0] && scored[0].score > 0 ? scored[0].v : (voices.find(v => /^en/i.test(v.lang || '')) || voices[0]);
+  return scored[0] && scored[0].score > 0 ? scored[0].v : voices[0];
 }
 
 function speak(text, opts) {
   opts = opts || {};
   if (!voiceEnabled || !window.speechSynthesis) return;
   try {
-    window.speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(speakForTts(text));
+    // Cancel only when starting a new intentional cue (avoids robotic cutoffs mid-word when possible)
+    if (opts.queue !== true) window.speechSynthesis.cancel();
+    const raw = speakForTts(String(text || '')).trim();
+    if (!raw) return;
+    // Split into short phrases for more natural pacing
+    const parts = raw
+      .replace(/\s+/g, ' ')
+      .split(/(?<=[.!?])\s+|\s+[—–-]\s+/)
+      .map((p) => p.trim())
+      .filter(Boolean);
+    const chunks = parts.length ? parts : [raw];
     const voice = pickCoachVoice();
-    if (voice) u.voice = voice;
     const energetic = opts.energy !== false;
-    if (trainerGender === 'male') {
-      u.rate = energetic ? 1.18 : 1.08;
-      u.pitch = energetic ? 1.0 : 0.98;
-    } else {
-      u.rate = energetic ? 1.2 : 1.1;
-      u.pitch = energetic ? 1.15 : 1.08;
-    }
-    u.volume = 1;
-    window.speechSynthesis.speak(u);
+    chunks.forEach((chunk, i) => {
+      const u = new SpeechSynthesisUtterance(chunk);
+      if (voice) u.voice = voice;
+      // Natural conversational pace (slower = less robotic)
+      if (trainerGender === 'male') {
+        u.rate = energetic ? 1.02 : 0.98;
+        u.pitch = 1.0;
+      } else {
+        u.rate = energetic ? 1.0 : 0.96;
+        u.pitch = 1.05;
+      }
+      u.volume = 1;
+      // Slight pause between phrases
+      if (i > 0) u.rate = Math.max(0.92, u.rate - 0.02);
+      window.speechSynthesis.speak(u);
+    });
   } catch (_) {}
 }
 
 const COACH_LINES = {
   intro: [
-    function() { return "Yes! You showed up. That already puts you ahead. Let's put in the work — stay with me the whole way!"; },
-    function() { return "I love this energy. Phone down, shoulders back — we're about to move. You've got this!"; },
-    function() { return "Alright, athlete — no half effort today. Breathe in, lock in, and follow my lead!"; }
+    function() { return "Nice. You showed up. We'll keep this simple — follow along, and I'll guide you through each move."; },
+    function() { return "Okay, let's ease in. I'll call the exercises and a few form reminders as we go."; },
+    function() { return "Good to see you. Stay relaxed, breathe normally, and move with control."; }
   ],
   workReps: [
-    function(n, r) { return "Let's go! " + r + " strong " + n + ". Full range, controlled power — make every single rep count!"; },
-    function(n, r) { return "Come on! " + r + " " + n + " right now. Drive with purpose — I want clean form and real effort!"; },
-    function(n, r) { return "Time to work! " + r + " " + n + ". Don't rush — own each rep. You're stronger than you think!"; },
-    function(n, r) { return "Here we go! " + r + " quality " + n + ". Chest proud, core tight — push it!"; },
-    function(n, r) { return "This is your set! " + r + " " + n + ". Stay present. Feel the muscle. Finish every one!"; },
-    function(n, r) { return "Let's earn it! " + r + " " + n + ". No shortcuts — great form, great effort, great you!"; }
+    function(n, r) { return "Next up, " + n + ". Aim for about " + r + " reps. Take your time and keep good form."; },
+    function(n, r) { return "Alright — " + n + ". Roughly " + r + " reps. Smooth and controlled."; },
+    function(n, r) { return "Here we go. " + n + ", about " + r + " reps. Stand tall and stay steady."; },
+    function(n, r) { return n + ". Let's work toward " + r + " solid reps. Quality over speed."; }
   ],
   workTime: [
-    function(n) { return "Let's go! " + n + ". Stay locked in the whole time — breathe and keep quality high!"; },
-    function(n) { return "Work time! " + n + ". You've got this window — fill it with real effort!"; },
-    function(n) { return "Come on! " + n + ". Hold your posture, stay smooth, give me everything you've got!"; },
-    function(n) { return "Here we go — " + n + ". Focus on the movement. You're in control. Own this set!"; },
-    function(n) { return "Yes! " + n + " right now. Strong and steady. I believe in this version of you!"; },
-    function(n) { return "Time to move! " + n + ". Don't coast — stay intentional until the clock hits zero!"; }
+    function(n) { return "Okay — " + n + ". Stay with the movement for this whole interval."; },
+    function(n) { return "Next, " + n + ". Breathe steadily and keep your form clean."; },
+    function(n) { return "Let's do " + n + ". Controlled pace — you've got this."; },
+    function(n) { return n + ". Hold your posture and move smoothly until the timer ends."; }
   ],
   mid: [
-    function() { return "Halfway — stay with it! This is where champions keep form!"; },
-    function() { return "You're in the middle — don't fade! Push through, breathe, keep quality!"; },
-    function() { return "Midway and strong! Dig a little deeper — you've already proven you can start, now finish!"; },
-    function() { return "Keep going! Halfway done. Chest up, core braced — still in the fight!"; }
+    function() { return "You're halfway. Keep the same pace — no rushing."; },
+    function() { return "Midway. Check your form and stay steady."; },
+    function() { return "Halfway there. Nice work — keep going."; }
   ],
   form: [
-    function(tip) { return "Coach tip: " + tip; },
-    function(tip) { return "Form check — " + tip; },
-    function(tip) { return "Remember: " + tip + ". Quality over ego!"; }
+    function(tip) { return tip; },
+    function(tip) { return "Quick form note: " + tip; }
   ],
   rest: [
-    function() { return "Yes! Beautiful work. Rest up, shake it out, breathe deep — recover so the next set is even better!"; },
-    function() { return "Nice! You earned this break. Loosen the shoulders, slow your breath. Stay ready — we're not done yet!"; },
-    function() { return "Great set! Catch your breath. Hydrate if you need. Mentally lock in for what's next!"; },
-    function() { return "That's the standard! Rest smart. Keep moving gently. Your next effort starts soon!"; },
-    function() { return "Outstanding! Recover with intention. You're building something here — be proud, then get set!"; }
+    function() { return "Rest. Shake out your arms and take a few easy breaths."; },
+    function() { return "Nice set. Catch your breath — next move is coming up."; },
+    function() { return "Good work. Use this rest, then we'll keep going."; }
   ],
   ready: [
-    function(n) { return "Get ready! Next up — " + n + ". Set your feet, find your focus, and bring serious energy!"; },
-    function(n) { return "Coming up: " + n + ". Shake out the arms. This is your moment — let's make it count!"; },
-    function(n) { return "On deck — " + n + ". Deep breath in… and out. When we start, you go all in!"; },
-    function(n) { return "Next move: " + n + ". Visualize one perfect rep. Then do it again. Ready when you are!"; }
+    function(n) { return "Get ready for " + n + "."; },
+    function(n) { return "Coming up: " + n + ". Set your stance."; },
+    function(n) { return "Next is " + n + ". When you're ready, we'll begin."; }
   ],
   ten: [
-    function() { return "Ten seconds — stay tall, stay strong!"; },
-    function() { return "Ten left — don't quit on the finish!"; }
+    function() { return "Ten seconds left."; },
+    function() { return "About ten seconds — stay tall."; }
   ],
   five: [
-    function() { return "Five seconds — finish strong! Empty the tank!"; },
-    function() { return "Final five — dig deep, no quitting now!"; },
-    function() { return "Almost there — five more, give me everything!"; },
-    function() { return "Last five! Pride in every second — finish like it matters!"; }
+    function() { return "Five seconds. Finish strong."; },
+    function() { return "Last few seconds. Keep your form."; },
+    function() { return "Almost done — five seconds."; }
   ],
   done: [
-    function() { return "Session complete! Outstanding work. You showed up and put in the work — be genuinely proud of that!"; },
-    function() { return "That's a wrap! Incredible effort from start to finish. Your future self is already thanking you!"; },
-    function() { return "Done! You didn't negotiate with the couch today. Amazing discipline — see you next session, stronger!"; },
-    function() { return "Finished! That consistency is the real flex. Recover well, eat well, and come back hungry!"; }
+    function() { return "Session complete. Really solid work — take a moment, then save when you're ready."; },
+    function() { return "That's it for this session. You put in the work. Nice job."; },
+    function() { return "All done. Recover well — see you next time."; }
   ]
 };
 
@@ -992,11 +999,11 @@ function speakExerciseStart(ex) {
   var m = exerciseMeta(ex);
   var n = speakForTts(m.name);
   var line = m.reps ? coachLine('workReps', n, m.reps) : coachLine('workTime', n);
-  // Occasionally add a short form cue (keeps coaching denser without always stacking)
+  // Soft form reminder sometimes — separate sentence for natural pause
   try {
-    if (Math.random() < 0.55 && typeof formTipFor === 'function') {
+    if (Math.random() < 0.4 && typeof formTipFor === 'function') {
       var tip = formTipFor(ex && ex.name);
-      if (tip && tip.length < 90) line = line + " " + coachLine('form', speakForTts(tip));
+      if (tip && tip.length < 70) line = line + ". " + coachLine('form', speakForTts(tip));
     }
   } catch (_) {}
   speak(line);
@@ -1009,14 +1016,7 @@ function speakRest() { speak(coachLine('rest')); }
 function speakDone() { speak(coachLine('done')); }
 function speakReady(ex) {
   var n = speakForTts((ex && ex.name) || 'your first move');
-  var line = coachLine('ready', n);
-  try {
-    if (typeof formTipFor === 'function') {
-      var tip = formTipFor(ex && ex.name);
-      if (tip && tip.length < 80) line = line + " " + coachLine('form', speakForTts(tip));
-    }
-  } catch (_) {}
-  speak(line);
+  speak(coachLine('ready', n));
 }
 function speakIntro() { speak(coachLine('intro')); }
 
@@ -2361,8 +2361,8 @@ async function handleAction(action, el) {
   }
   if (action === 'preview-coach') {
     const sample = trainerGender === 'male'
-      ? "Let's go! I'm your coach today. Stay locked in, push with purpose, and finish every set strong. You've got this!"
-      : "Yes! I'm with you for this session. Breathe, move with intention, and don't leave anything in the tank. Let's put in the work!";
+      ? "Hi — I'll be coaching you today. I'll call each move, remind you about form, and keep the pace steady. Let's put in the work."
+      : "Hi there. I'll guide you through this session. I'll name each exercise, share a quick form tip when it helps, and keep things calm and clear.";
     speak(sample);
     return;
   }
@@ -2493,7 +2493,7 @@ async function handleAction(action, el) {
     phaseSeconds = w.exercises[0].duration;
     totalSeconds = 0;
     navigate('workoutRun');
-    setTimeout(() => { speakIntro(); setTimeout(() => speakReady(w.exercises[0]), 3200); }, 200);
+    setTimeout(() => { speakIntro(); setTimeout(() => speakReady(w.exercises[0]), 4500); }, 250);
     return;
   }
 
