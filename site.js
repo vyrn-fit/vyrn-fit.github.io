@@ -35,7 +35,8 @@
           <div class="site-hero-copy">
             <p class="site-eyebrow">Equipment-free fitness</p>
             <h1 class="site-title">Show up.<br/>Put in the work.</h1>
-            <p class="site-hero-sub">Training for home, office, and the playground. Timed sessions, history, and weekly challenges — no special gear.</p>
+            <p class="site-hero-sub site-pitch">Vyrn is the short, no-equipment workout you can do at your desk or on a park bench — with form guides, a voice coach, and optional friends challenges — so showing up is easier than skipping.</p>
+            <p class="site-hero-support">Home · Office · Playground · Timed sessions · History · Weekly challenges</p>
             <div class="site-hero-actions">
               <a class="btn primary" href="/?app=1">Start training</a>
               <a class="btn secondary" href="#workouts">See workouts</a>
