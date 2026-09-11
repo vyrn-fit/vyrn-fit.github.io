@@ -1,4 +1,4 @@
-const CACHE = 'vyrn-v60';
+const CACHE = 'vyrn-v61';
 const ASSETS = [
   '/',
   '/index.html',
