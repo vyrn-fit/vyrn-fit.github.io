@@ -1552,24 +1552,76 @@ function warmVoices() {
   window.speechSynthesis.onvoiceschanged = kick;
 }
 
+
+/** Open Spotify / Apple Music in the *native app* when possible so audio continues after returning to Vyrn. */
+function openMusicApp(which) {
+  const isSpotify = which === 'spotify';
+  const webUrl = isSpotify
+    ? 'https://open.spotify.com/search/workout%20focus'
+    : 'https://music.apple.com/search?term=workout';
+  // Native schemes — hand off to installed apps (leaves PWA)
+  const appUrl = isSpotify
+    ? 'spotify:search:workout%20focus'
+    : 'music://music.apple.com/search?term=workout';
+  const androidIntent = isSpotify
+    ? 'intent://open.spotify.com/search/workout%20focus#Intent;scheme=https;package=com.spotify.music;S.browser_fallback_url=https%3A%2F%2Fopen.spotify.com%2Fsearch%2Fworkout%2520focus;end'
+    : 'intent://music.apple.com/search?term=workout#Intent;scheme=https;package=com.apple.android.music;S.browser_fallback_url=https%3A%2F%2Fmusic.apple.com%2Fsearch%3Fterm%3Dworkout;end';
+
+  const ua = navigator.userAgent || '';
+  const isAndroid = /Android/i.test(ua);
+  const isIOS = /iPhone|iPad|iPod/i.test(ua);
+
+  // Mark that we intentionally left for music (optional UX)
+  try { sessionStorage.setItem('vyrn_music_handoff', which); } catch (_) {}
+
+  if (isAndroid) {
+    // Intent opens the app when installed; else Play / browser fallback
+    window.location.href = androidIntent;
+    return;
+  }
+
+  // iOS / desktop: try app URL first
+  const start = Date.now();
+  const onBlur = () => { document.removeEventListener('visibilitychange', onVis); };
+  const onVis = () => {
+    if (document.hidden) onBlur();
+  };
+  document.addEventListener('visibilitychange', onVis);
+
+  // Use location for app scheme so iOS PWA yields to Spotify/Music
+  window.location.href = appUrl;
+
+  // If still in Vyrn after ~1.2s, app likely missing → open official web/search page externally
+  setTimeout(() => {
+    document.removeEventListener('visibilitychange', onVis);
+    if (!document.hidden && Date.now() - start >= 1000) {
+      // Prefer a real browser window, not an in-app sheet when possible
+      const w = window.open(webUrl, '_blank', 'noopener,noreferrer');
+      if (!w) {
+        // Last resort: top-level web (user can switch back via app switcher)
+        window.location.href = webUrl;
+      }
+    }
+  }, 1200);
+}
+
+
 function renderMusicBar(compact) {
-  const spotifyUrl = 'https://open.spotify.com/search/workout%20focus';
-  const appleUrl = 'https://music.apple.com/search?term=workout';
   if (compact) {
     return `<div class="music-bar compact">
       <span class="music-label">Music</span>
-      <a class="music-chip" href="${spotifyUrl}" target="_blank" rel="noopener">Spotify</a>
-      <a class="music-chip" href="${appleUrl}" target="_blank" rel="noopener">Apple Music</a>
+      <button type="button" class="music-chip" data-action="open-spotify">Spotify</button>
+      <button type="button" class="music-chip" data-action="open-apple-music">Apple Music</button>
     </div>`;
   }
   return `<div class="music-card">
     <h3>Soundtrack</h3>
-    <p class="muted mb">Play your own music in the background — works great with headphones.</p>
+    <p class="muted mb">Opens the Spotify or Apple Music <strong>app</strong> so tracks keep playing when you return to Vyrn.</p>
     <div class="music-actions">
-      <a class="btn secondary music-link" href="${spotifyUrl}" target="_blank" rel="noopener">Open Spotify</a>
-      <a class="btn secondary music-link" href="${appleUrl}" target="_blank" rel="noopener">Open Apple Music</a>
+      <button type="button" class="btn secondary music-link" data-action="open-spotify">Open Spotify</button>
+      <button type="button" class="btn secondary music-link" data-action="open-apple-music">Open Apple Music</button>
     </div>
-    <p class="music-tip muted">Tip: start a playlist, return here, then hit Begin. Voice cues stay on top.</p>
+    <p class="music-tip muted">1) Open app · 2) Start a playlist · 3) Switch back to Vyrn (app switcher) · Music keeps going. Voice cues stay on top.</p>
   </div>`;
 }
 
@@ -2649,11 +2701,12 @@ function renderProfile() {
         <span>Sound effects</span>
         <button class="toggle ${sfxEnabled?'on':''}" data-action="toggle-sfx">${sfxEnabled?'On':'Off'}</button>
       </div>
-      <p class="muted" style="margin-top:12px;font-size:13px">Music: use Spotify or Apple Music in the background.</p>
+      <p class="muted" style="margin-top:12px;font-size:13px">Music opens in the Spotify / Apple Music app so it can play while you train.</p>
       <div class="music-actions" style="margin-top:10px">
-        <a class="btn secondary music-link" href="https://open.spotify.com/search/workout%20focus" target="_blank" rel="noopener">Spotify</a>
-        <a class="btn secondary music-link" href="https://music.apple.com/search?term=workout" target="_blank" rel="noopener">Apple Music</a>
+        <button type="button" class="btn secondary music-link" data-action="open-spotify">Spotify</button>
+        <button type="button" class="btn secondary music-link" data-action="open-apple-music">Apple Music</button>
       </div>
+      <p class="muted" style="margin-top:8px;font-size:12px">Start a playlist, then switch back to Vyrn via the app switcher.</p>
     </div>
     <div class="stats mt">
       <div class="stat"><div class="num">${stats.total}</div><div class="lbl">Sessions</div></div>
@@ -2773,6 +2826,14 @@ async function handleAction(action, el) {
   el = el || document.querySelector(`[data-action="${action}"]`);
   const msg = $('#auth-msg');
 
+  if (action === 'open-spotify') {
+    openMusicApp('spotify');
+    return;
+  }
+  if (action === 'open-apple-music') {
+    openMusicApp('apple');
+    return;
+  }
   if (action === 'start-onboarding') {
     obStep = 0;
     obDraft = { ...getBody() };
