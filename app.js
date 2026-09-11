@@ -32,6 +32,503 @@ const store = {
   }
 };
 
+
+// ——— Body metrics, onboarding, progress ———
+let obStep = 0;
+let obDraft = null;
+let progressRange = '30d'; // 7d | 30d | 90d
+
+const ACTIVITY_LEVELS = [
+  { id: 'sedentary', label: 'Sedentary', hint: 'Desk · little exercise' },
+  { id: 'light', label: 'Light', hint: '1–2 sessions / week' },
+  { id: 'moderate', label: 'Moderate', hint: '3–4 sessions / week' },
+  { id: 'active', label: 'Active', hint: '5–6 sessions / week' },
+  { id: 'very_active', label: 'Very active', hint: 'Daily · physical job' }
+];
+const GOALS = [
+  { id: 'lose', label: 'Lose weight' },
+  { id: 'maintain', label: 'Maintain' },
+  { id: 'strength', label: 'Build strength / muscle' },
+  { id: 'endurance', label: 'Improve endurance' },
+  { id: 'general', label: 'General fitness · move more' }
+];
+const TRAINING_STYLES = [
+  { id: 'bodyweight', label: 'Bodyweight · no equipment' },
+  { id: 'home_minimal', label: 'Home · minimal gear' },
+  { id: 'gym', label: 'Gym' },
+  { id: 'outdoor', label: 'Outdoor (run / walk)' },
+  { id: 'short', label: 'Short sessions (10–20 min)' },
+  { id: 'long', label: 'Longer sessions (30–45+ min)' }
+];
+const ACTIVITY_MULT = { sedentary: 1.2, light: 1.375, moderate: 1.55, active: 1.725, very_active: 1.9 };
+
+function defaultBody() {
+  return {
+    displayName: '',
+    sex: '', // male | female | prefer_not
+    age: null,
+    heightCm: null,
+    weightKg: null,
+    units: 'metric', // metric | imperial
+    activityLevel: '',
+    goal: '',
+    goalDetail: { targetKg: null, weeks: null },
+    trainingStyles: [],
+    onboardingComplete: false,
+    updatedAt: null
+  };
+}
+
+function getBody() {
+  const b = store.get('body');
+  return b && typeof b === 'object' ? { ...defaultBody(), ...b, goalDetail: { ...defaultBody().goalDetail, ...(b.goalDetail || {}) } } : defaultBody();
+}
+function setBody(partial) {
+  const next = { ...getBody(), ...partial, updatedAt: new Date().toISOString() };
+  if (partial && partial.goalDetail) next.goalDetail = { ...getBody().goalDetail, ...partial.goalDetail };
+  store.set('body', next);
+  return next;
+}
+function getWeights() {
+  const w = store.get('weights');
+  return Array.isArray(w) ? w.slice().sort((a, b) => a.date.localeCompare(b.date)) : [];
+}
+function logWeight(weightKg, dateStr) {
+  const date = dateStr || todayKey();
+  const kg = Math.round(Number(weightKg) * 10) / 10;
+  if (!(kg >= 30 && kg <= 300)) return { ok: false, error: 'Weight must be between 30 and 300 kg' };
+  let list = getWeights().filter(x => x.date !== date);
+  list.push({ date, weight_kg: kg });
+  list.sort((a, b) => a.date.localeCompare(b.date));
+  store.set('weights', list);
+  setBody({ weightKg: kg });
+  syncBodyCloud();
+  return { ok: true };
+}
+function needsOnboarding() {
+  if (!currentUser) return false;
+  return !getBody().onboardingComplete;
+}
+function enterAppHome() {
+  if (needsOnboarding()) {
+    obStep = 0;
+    obDraft = { ...getBody() };
+    if (!obDraft.displayName) obDraft.displayName = displayName() || '';
+    navigate('onboarding');
+  } else {
+    enterAppHome();
+  }
+}
+
+function heightM(cm) { return Number(cm) / 100; }
+function calcBmi(weightKg, heightCm) {
+  const w = Number(weightKg), h = Number(heightCm);
+  if (!(w > 0 && h >= 100 && h <= 250)) return null;
+  const bmi = w / (heightM(h) ** 2);
+  return Math.round(bmi * 10) / 10;
+}
+function bmiCategory(bmi) {
+  if (bmi == null) return { label: '—', tone: 'neutral', tip: '' };
+  if (bmi < 18.5) return { label: 'Underweight', tone: 'info', tip: 'BMI is one rough indicator — not a full health score.' };
+  if (bmi < 25) return { label: 'In the typical range', tone: 'good', tip: 'BMI is informational only — energy and strength matter more.' };
+  if (bmi < 30) return { label: 'Above typical range', tone: 'warn', tip: 'BMI does not measure muscle or fitness. Use it as context, not a verdict.' };
+  return { label: 'Well above typical range', tone: 'warn', tip: 'BMI is a simple ratio, not a diagnosis. Focus on sustainable movement.' };
+}
+function estimateTdee(body) {
+  const age = Number(body.age), h = Number(body.heightCm), w = Number(body.weightKg);
+  if (!(age >= 13 && age <= 100 && h && w)) return null;
+  // Mifflin-St Jeor
+  let bmr;
+  if (body.sex === 'male') bmr = 10 * w + 6.25 * h - 5 * age + 5;
+  else if (body.sex === 'female') bmr = 10 * w + 6.25 * h - 5 * age - 161;
+  else bmr = 10 * w + 6.25 * h - 5 * age - 78; // midpoint
+  const mult = ACTIVITY_MULT[body.activityLevel] || 1.2;
+  return Math.round(bmr * mult);
+}
+function kgToLb(kg) { return Math.round(Number(kg) * 2.20462 * 10) / 10; }
+function lbToKg(lb) { return Math.round(Number(lb) / 2.20462 * 10) / 10; }
+function cmToFtIn(cm) {
+  const totalIn = Number(cm) / 2.54;
+  const ft = Math.floor(totalIn / 12);
+  const inch = Math.round(totalIn - ft * 12);
+  return { ft, inch };
+}
+function ftInToCm(ft, inch) {
+  return Math.round((Number(ft) * 12 + Number(inch || 0)) * 2.54);
+}
+function validateBodyDraft(d, step) {
+  if (step === 0) return true;
+  if (step === 1) {
+    if (!d.sex) return 'Pick an option for sex';
+    const age = Number(d.age);
+    if (!(age >= 13 && age <= 100)) return 'Enter an age between 13 and 100';
+  }
+  if (step === 2) {
+    const h = Number(d.heightCm), w = Number(d.weightKg);
+    if (!(h >= 100 && h <= 250)) return 'Height should be 100–250 cm';
+    if (!(w >= 30 && w <= 300)) return 'Weight should be 30–300 kg';
+  }
+  if (step === 3) {
+    if (!d.activityLevel) return 'Select your activity level';
+  }
+  if (step === 4) {
+    if (!d.goal) return 'Select a primary goal';
+    if (d.goal === 'lose') {
+      const t = Number(d.goalDetail?.targetKg);
+      const weeks = Number(d.goalDetail?.weeks);
+      if (t && !(t > 0 && t <= 50)) return 'Target loss should be 1–50 kg';
+      if (weeks && !(weeks >= 2 && weeks <= 104)) return 'Timeframe should be 2–104 weeks';
+      if (t && weeks) {
+        const rate = t / weeks;
+        if (rate > 1) return 'That pace is aggressive (>1 kg/week). Aim for 0.25–0.75 kg/week when you can.';
+      }
+    }
+  }
+  if (step === 5) {
+    if (!d.trainingStyles || !d.trainingStyles.length) return 'Pick at least one training style';
+  }
+  return true;
+}
+function goalChipText(body) {
+  if (!body || !body.goal) return '';
+  const g = GOALS.find(x => x.id === body.goal);
+  const label = g ? g.label : body.goal;
+  if (body.goal === 'lose' && body.goalDetail?.targetKg) {
+    const start = getWeights()[0]?.weight_kg || body.weightKg;
+    const cur = body.weightKg;
+    const target = start - Number(body.goalDetail.targetKg);
+    if (start && cur && target) {
+      const done = Math.max(0, start - cur);
+      const total = Number(body.goalDetail.targetKg);
+      const pct = Math.min(100, Math.round((done / total) * 100));
+      return `Lose ${total} kg · ${pct}%`;
+    }
+    return `Lose ${body.goalDetail.targetKg} kg`;
+  }
+  return label;
+}
+async function syncBodyCloud() {
+  if (!isSignedIn() || !supabaseClient) return;
+  const body = getBody();
+  try {
+    await supabaseClient.from('profiles').upsert({
+      id: currentUser.id,
+      display_name: body.displayName || displayName(),
+      full_name: body.displayName || displayName(),
+      // optional columns — ignored if not present (error swallowed)
+      sex: body.sex || null,
+      age: body.age || null,
+      height_cm: body.heightCm || null,
+      weight_kg: body.weightKg || null,
+      activity_level: body.activityLevel || null,
+      goal: body.goal || null,
+      goal_detail: body.goalDetail || null,
+      training_styles: body.trainingStyles || [],
+      onboarding_complete: !!body.onboardingComplete,
+      units: body.units || 'metric',
+      updated_at: new Date().toISOString()
+    }, { onConflict: 'id' });
+  } catch (e) {
+    console.warn('body sync', e.message || e);
+  }
+}
+function weekMinutes() {
+  const history = getHistory();
+  const weekAgo = new Date();
+  weekAgo.setDate(weekAgo.getDate() - 6);
+  const key = weekAgo.toISOString().slice(0, 10);
+  return history.filter(h => h.date >= key).reduce((s, h) => s + (Number(h.duration) || Number(h.seconds) || 0), 0);
+}
+function formatMin(sec) {
+  const m = Math.round((Number(sec) || 0) / 60);
+  return m + ' min';
+}
+function weightSeries(range) {
+  const all = getWeights();
+  const days = range === '7d' ? 7 : range === '90d' ? 90 : 30;
+  const from = new Date();
+  from.setDate(from.getDate() - (days - 1));
+  const fromKey = from.toISOString().slice(0, 10);
+  let pts = all.filter(w => w.date >= fromKey);
+  if (!pts.length && all.length) pts = all.slice(-Math.min(all.length, days));
+  return pts;
+}
+function renderWeightChart(pts) {
+  if (!pts.length) {
+    return `<div class="chart-empty muted">No weight logs yet. Log today to start your chart.</div>`;
+  }
+  const w = 320, h = 140, pad = 16;
+  const ys = pts.map(p => p.weight_kg);
+  let min = Math.min(...ys), max = Math.max(...ys);
+  if (min === max) { min -= 1; max += 1; }
+  const span = max - min || 1;
+  const coords = pts.map((p, i) => {
+    const x = pad + (pts.length === 1 ? w / 2 - pad : (i / (pts.length - 1)) * (w - pad * 2));
+    const y = pad + (1 - (p.weight_kg - min) / span) * (h - pad * 2);
+    return [x, y];
+  });
+  const poly = coords.map(([x, y]) => x.toFixed(1) + ',' + y.toFixed(1)).join(' ');
+  const last = coords[coords.length - 1];
+  return `<svg class="weight-chart" viewBox="0 0 ${w} ${h}" role="img" aria-label="Weight trend">
+    <defs><linearGradient id="wg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#ff3b2f55"/><stop offset="100%" stop-color="#ff3b2f00"/></linearGradient></defs>
+    <polyline fill="none" stroke="#ff3b2f" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" points="${poly}"/>
+    <circle cx="${last[0]}" cy="${last[1]}" r="4" fill="#ff3b2f"/>
+    <text x="${pad}" y="${h - 4}" class="chart-axis" fill="#737373" font-size="10">${min.toFixed(1)}</text>
+    <text x="${w - pad}" y="${h - 4}" text-anchor="end" fill="#737373" font-size="10">${max.toFixed(1)} kg</text>
+  </svg>`;
+}
+
+function renderOnboarding() {
+  if (!obDraft) obDraft = { ...getBody() };
+  const d = obDraft;
+  const total = 6;
+  const step = Math.min(Math.max(obStep, 0), total - 1);
+  const err = '';
+  const dots = Array.from({ length: total }, (_, i) =>
+    `<span class="ob-dot ${i === step ? 'on' : i < step ? 'done' : ''}"></span>`
+  ).join('');
+  let body = '';
+  if (step === 0) {
+    body = `
+      <h2>Let’s set you up</h2>
+      <p class="muted mb">A few details so Vyrn can track progress. You can edit anytime in Profile.</p>
+      <label class="field-label">Display name</label>
+      <input class="input" id="ob-name" type="text" maxlength="40" placeholder="What should we call you?" value="${escapeHtml(d.displayName || '')}" />
+    `;
+  } else if (step === 1) {
+    body = `
+      <h2>About you</h2>
+      <p class="muted mb">Used only for rough estimates — never shared publicly.</p>
+      <label class="field-label">Sex</label>
+      <div class="chip-grid">
+        ${[['male','Male'],['female','Female'],['prefer_not','Prefer not to say']].map(([id,l]) =>
+          `<button type="button" class="chip ${d.sex===id?'on':''}" data-action="ob-sex" data-val="${id}">${l}</button>`
+        ).join('')}
+      </div>
+      <label class="field-label mt">Age</label>
+      <input class="input" id="ob-age" type="number" inputmode="numeric" min="13" max="100" placeholder="Years" value="${d.age || ''}" />
+    `;
+  } else if (step === 2) {
+    const units = d.units || 'metric';
+    const bmi = calcBmi(d.weightKg, d.heightCm);
+    const cat = bmiCategory(bmi);
+    let hVal = '', wVal = '';
+    if (units === 'metric') {
+      hVal = d.heightCm || '';
+      wVal = d.weightKg || '';
+    } else {
+      const fi = d.heightCm ? cmToFtIn(d.heightCm) : { ft: '', inch: '' };
+      hVal = fi.ft;
+      wVal = d.weightKg ? kgToLb(d.weightKg) : '';
+    }
+    body = `
+      <h2>Height & weight</h2>
+      <p class="muted mb">Metric by default. Toggle anytime.</p>
+      <div class="unit-toggle mb">
+        <button type="button" class="chip ${units==='metric'?'on':''}" data-action="ob-units" data-val="metric">kg / cm</button>
+        <button type="button" class="chip ${units==='imperial'?'on':''}" data-action="ob-units" data-val="imperial">lb / ft</button>
+      </div>
+      ${units === 'metric' ? `
+        <label class="field-label">Height (cm)</label>
+        <input class="input" id="ob-height" type="number" inputmode="decimal" min="100" max="250" placeholder="e.g. 170" value="${hVal}" />
+        <label class="field-label mt">Weight (kg)</label>
+        <input class="input" id="ob-weight" type="number" inputmode="decimal" min="30" max="300" step="0.1" placeholder="e.g. 68" value="${wVal}" />
+      ` : `
+        <label class="field-label">Height (ft)</label>
+        <div class="row-2">
+          <input class="input" id="ob-ft" type="number" inputmode="numeric" min="3" max="8" placeholder="ft" value="${hVal}" />
+          <input class="input" id="ob-in" type="number" inputmode="numeric" min="0" max="11" placeholder="in" value="${d.heightCm ? cmToFtIn(d.heightCm).inch : ''}" />
+        </div>
+        <label class="field-label mt">Weight (lb)</label>
+        <input class="input" id="ob-weight" type="number" inputmode="decimal" min="66" max="660" step="0.1" placeholder="e.g. 150" value="${wVal}" />
+      `}
+      <div class="bmi-live card mt" id="ob-bmi-box">
+        <div class="bmi-num">${bmi != null ? bmi : '—'}</div>
+        <div class="bmi-meta">
+          <strong>BMI ${cat.label}</strong>
+          <p class="muted" style="font-size:12px;margin:4px 0 0">${cat.tip || 'Enter height and weight to see BMI.'}</p>
+        </div>
+      </div>
+    `;
+  } else if (step === 3) {
+    body = `
+      <h2>Activity level</h2>
+      <p class="muted mb">Roughly how often you move each week.</p>
+      <div class="choice-list">
+        ${ACTIVITY_LEVELS.map(a => `
+          <button type="button" class="choice ${d.activityLevel===a.id?'on':''}" data-action="ob-activity" data-val="${a.id}">
+            <strong>${a.label}</strong><span class="muted">${a.hint}</span>
+          </button>`).join('')}
+      </div>
+    `;
+  } else if (step === 4) {
+    const tdee = estimateTdee(d);
+    body = `
+      <h2>Primary goal</h2>
+      <p class="muted mb">We’ll shape progress around this. You can change it later.</p>
+      <div class="choice-list">
+        ${GOALS.map(g => `
+          <button type="button" class="choice ${d.goal===g.id?'on':''}" data-action="ob-goal" data-val="${g.id}">
+            <strong>${g.label}</strong>
+          </button>`).join('')}
+      </div>
+      ${d.goal === 'lose' ? `
+        <div class="card mt">
+          <label class="field-label">Target loss (kg, optional)</label>
+          <input class="input" id="ob-target" type="number" inputmode="decimal" min="1" max="50" step="0.5" placeholder="e.g. 5" value="${d.goalDetail?.targetKg || ''}" />
+          <label class="field-label mt">Timeframe (weeks, optional)</label>
+          <input class="input" id="ob-weeks" type="number" inputmode="numeric" min="2" max="104" placeholder="e.g. 12" value="${d.goalDetail?.weeks || ''}" />
+          <p class="muted" style="font-size:12px;margin-top:8px">A steady pace is about 0.25–0.75 kg per week.</p>
+        </div>` : ''}
+      ${tdee ? `<p class="muted mt" style="font-size:12px">Soft daily energy ballpark: ~${tdee} kcal (estimate only — Vyrn is not a food tracker).</p>` : ''}
+    `;
+  } else {
+    body = `
+      <h2>How you like to train</h2>
+      <p class="muted mb">Select all that fit. Helps us recommend sessions.</p>
+      <div class="chip-grid">
+        ${TRAINING_STYLES.map(s => `
+          <button type="button" class="chip ${(d.trainingStyles||[]).includes(s.id)?'on':''}" data-action="ob-style" data-val="${s.id}">${s.label}</button>
+        `).join('')}
+      </div>
+    `;
+  }
+  return `<div class="screen fade-in onboarding-screen">
+    <div class="ob-progress">${dots}</div>
+    ${body}
+    <p class="auth-msg" id="ob-msg"></p>
+    <div class="btn-stack mt">
+      ${step > 0 ? `<button class="btn ghost" data-action="ob-back">Back</button>` : ''}
+      <button class="btn primary" data-action="ob-next">${step === total - 1 ? 'Finish' : 'Continue'}</button>
+    </div>
+  </div>`;
+}
+
+function collectObFields() {
+  if (!obDraft) obDraft = { ...getBody() };
+  const name = $('#ob-name');
+  if (name) obDraft.displayName = name.value.trim();
+  const age = $('#ob-age');
+  if (age && age.value !== '') obDraft.age = Number(age.value);
+  const units = obDraft.units || 'metric';
+  if (units === 'metric') {
+    const h = $('#ob-height');
+    const w = $('#ob-weight');
+    if (h && h.value !== '') obDraft.heightCm = Number(h.value);
+    if (w && w.value !== '') obDraft.weightKg = Number(w.value);
+  } else {
+    const ft = $('#ob-ft');
+    const inch = $('#ob-in');
+    const w = $('#ob-weight');
+    if (ft && ft.value !== '') {
+      obDraft.heightCm = ftInToCm(ft.value, inch ? inch.value : 0);
+    }
+    if (w && w.value !== '') obDraft.weightKg = lbToKg(w.value);
+  }
+  const target = $('#ob-target');
+  const weeks = $('#ob-weeks');
+  if (!obDraft.goalDetail) obDraft.goalDetail = {};
+  if (target && target.value !== '') obDraft.goalDetail.targetKg = Number(target.value);
+  if (weeks && weeks.value !== '') obDraft.goalDetail.weeks = Number(weeks.value);
+}
+
+function escapeHtml(s) {
+  return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function renderProgress() {
+  const body = getBody();
+  const weights = getWeights();
+  const pts = weightSeries(progressRange);
+  const start = weights[0]?.weight_kg;
+  const current = body.weightKg || weights[weights.length - 1]?.weight_kg;
+  const delta = (start != null && current != null) ? Math.round((current - start) * 10) / 10 : null;
+  const bmi = calcBmi(current, body.heightCm);
+  const cat = bmiCategory(bmi);
+  const stats = getStats();
+  const mins = weekMinutes();
+  const units = body.units || 'metric';
+  const chip = goalChipText(body);
+  return `<div class="screen fade-in">
+    <div class="topbar">
+      <h2>Progress</h2>
+      <button class="btn ghost" data-go="profile" style="font-size:13px">Edit metrics</button>
+    </div>
+    ${!body.onboardingComplete ? `<div class="card mb"><p class="muted">Finish setup to unlock full progress tracking.</p>
+      <button class="btn primary" data-action="start-onboarding">Complete setup</button></div>` : ''}
+    <div class="card mb">
+      <div class="progress-head">
+        <div>
+          <p class="muted" style="font-size:12px;margin:0">Current weight</p>
+          <div class="big-metric">${current != null ? (units==='imperial' ? kgToLb(current)+' lb' : current+' kg') : '—'}</div>
+        </div>
+        <div class="delta ${delta==null?'':delta<=0?'down':'up'}">${delta==null?'': (delta>0?'+':'')+delta+(units==='imperial'?' lb':' kg')}</div>
+      </div>
+      <div class="mini-stats">
+        <div><span class="muted">Start</span><strong>${start!=null?start+(units==='metric'?' kg':''):'—'}</strong></div>
+        <div><span class="muted">BMI</span><strong>${bmi!=null?bmi:'—'}</strong> <span class="muted" style="font-size:11px">${cat.label}</span></div>
+      </div>
+      ${chip ? `<div class="goal-chip mt">${escapeHtml(chip)}</div>` : ''}
+    </div>
+    <div class="card mb">
+      <div class="range-tabs">
+        ${['7d','30d','90d'].map(r => `<button type="button" class="chip ${progressRange===r?'on':''}" data-action="progress-range" data-val="${r}">${r}</button>`).join('')}
+      </div>
+      ${renderWeightChart(pts)}
+      <div class="log-weight-row mt">
+        <input class="input" id="log-weight-input" type="number" inputmode="decimal" step="0.1" placeholder="${units==='imperial'?'Weight (lb)':'Weight (kg)'}" />
+        <button class="btn primary" data-action="log-weight">Log</button>
+      </div>
+      <p class="muted" style="font-size:12px;margin-top:6px">One entry per day — logging again updates today.</p>
+    </div>
+    <div class="card mb">
+      <h3>Workouts</h3>
+      <div class="stats">
+        <div class="stat"><div class="num">${stats.streak}</div><div class="lbl">Streak</div></div>
+        <div class="stat"><div class="num">${stats.weekCount}</div><div class="lbl">This week</div></div>
+        <div class="stat"><div class="num">${Math.round(mins/60)||0}</div><div class="lbl">Min week</div></div>
+      </div>
+      ${stats.weekCount === 0 ? `<p class="muted mt">No sessions this week yet.</p>
+        <button class="btn secondary mt" data-go="library">Start a quick workout</button>` : ''}
+    </div>
+    ${renderTabBar('progress')}
+  </div>`;
+}
+
+function renderBodySettingsCard() {
+  const body = getBody();
+  const units = body.units || 'metric';
+  const bmi = calcBmi(body.weightKg, body.heightCm);
+  const cat = bmiCategory(bmi);
+  return `<div class="card mb">
+    <h3>Body & goals</h3>
+    <p class="muted mb" style="font-size:13px">BMI ${bmi != null ? bmi : '—'} · ${cat.label}</p>
+    <div class="unit-toggle mb">
+      <button type="button" class="chip ${units==='metric'?'on':''}" data-action="set-units" data-val="metric">Metric</button>
+      <button type="button" class="chip ${units==='imperial'?'on':''}" data-action="set-units" data-val="imperial">Imperial</button>
+    </div>
+    <label class="field-label">Height (${units==='metric'?'cm':'ft / in'})</label>
+    ${units==='metric'
+      ? `<input class="input" id="set-height" type="number" value="${body.heightCm||''}" min="100" max="250" />`
+      : `<div class="row-2"><input class="input" id="set-ft" type="number" value="${body.heightCm?cmToFtIn(body.heightCm).ft:''}" /><input class="input" id="set-in" type="number" value="${body.heightCm?cmToFtIn(body.heightCm).inch:''}" /></div>`}
+    <label class="field-label mt">Weight (${units==='metric'?'kg':'lb'})</label>
+    <input class="input" id="set-weight" type="number" step="0.1" value="${body.weightKg!=null?(units==='imperial'?kgToLb(body.weightKg):body.weightKg):''}" />
+    <label class="field-label mt">Activity</label>
+    <select class="input" id="set-activity">
+      <option value="">Select</option>
+      ${ACTIVITY_LEVELS.map(a => `<option value="${a.id}" ${body.activityLevel===a.id?'selected':''}>${a.label}</option>`).join('')}
+    </select>
+    <label class="field-label mt">Goal</label>
+    <select class="input" id="set-goal">
+      <option value="">Select</option>
+      ${GOALS.map(g => `<option value="${g.id}" ${body.goal===g.id?'selected':''}>${g.label}</option>`).join('')}
+    </select>
+    <button class="btn primary mt" data-action="save-body" style="width:100%">Save metrics</button>
+    <button class="btn ghost mt" data-action="start-onboarding" style="width:100%">Re-run setup</button>
+  </div>`;
+}
+
+
 // Exercise photos (free stock — Unsplash / Pexels)
 function photoKey(name) {
   const n = (name || '').toLowerCase();
@@ -1552,11 +2049,23 @@ async function init() {
     currentScreen = 'home';
   }
   if (currentUser && !currentUser.isGuest) {
-    currentScreen = currentScreen === 'welcome' ? 'home' : currentScreen;
-    ensureProfile().then(() => Promise.all([refreshSocial(), pullCloudHistory()])).then(() => { if (currentScreen === 'home' || currentScreen === 'profile') render(); });
-    if (pendingJoinCode) {
+    currentScreen = currentScreen === 'welcome' ? (needsOnboarding() ? 'onboarding' : 'home') : currentScreen;
+    if (needsOnboarding()) {
+      obStep = 0;
+      obDraft = { ...getBody() };
+      if (!obDraft.displayName) obDraft.displayName = displayName() || '';
+      currentScreen = 'onboarding';
+    }
+    ensureProfile().then(() => Promise.all([refreshSocial(), pullCloudHistory()])).then(() => {
+      if (['home', 'profile', 'progress', 'onboarding'].includes(currentScreen)) render();
+    });
+    if (pendingJoinCode && !needsOnboarding()) {
       currentScreen = 'challenge';
     }
+  } else if (currentUser && needsOnboarding()) {
+    obStep = 0;
+    obDraft = { ...getBody() };
+    currentScreen = 'onboarding';
   }
   render();
 }
@@ -1591,11 +2100,16 @@ function render() {
   const app = $('#app');
   if (!app) return;
   if (!currentUser && !['welcome', 'login'].includes(currentScreen)) currentScreen = 'welcome';
+  if (currentUser && needsOnboarding() && !['onboarding', 'welcome', 'login'].includes(currentScreen)) {
+    currentScreen = 'onboarding';
+    if (!obDraft) { obStep = 0; obDraft = { ...getBody() }; if (!obDraft.displayName) obDraft.displayName = displayName() || ''; }
+  }
   const map = {
     welcome: renderWelcome, login: renderLogin, home: renderHome,
     library: renderLibrary, workoutDetail: renderWorkoutDetail, workoutRun: renderWorkoutRun,
     history: renderHistory, challenge: renderChallenge, challengeDetail: renderChallengeDetail,
-    challengeRun: renderChallengeRun, profile: renderProfile
+    challengeRun: renderChallengeRun, profile: renderProfile,
+    onboarding: renderOnboarding, progress: renderProgress
   };
   app.innerHTML = (map[currentScreen] || renderWelcome)();
   bindEvents();
@@ -1633,8 +2147,8 @@ function renderTabBar(active) {
   return `<nav class="tabbar">
     <button class="tab ${active==='home'?'active':''}" data-go="home">Home</button>
     <button class="tab ${active==='library'?'active':''}" data-go="library">Workouts</button>
+    <button class="tab ${active==='progress'?'active':''}" data-go="progress">Progress</button>
     <button class="tab ${active==='challenge'?'active':''}" data-go="challenge">Community</button>
-    <button class="tab ${active==='history'?'active':''}" data-go="history">History</button>
     <button class="tab ${active==='profile'?'active':''}" data-go="profile">Profile</button>
   </nav>`;
 }
@@ -1686,16 +2200,37 @@ function renderLogin() {
 
 function renderHome() {
   const stats = getStats();
-  const name = currentUser?.email?.split('@')[0] || 'Athlete';
+  const body = getBody();
+  const name = body.displayName || currentUser?.email?.split('@')[0] || 'Athlete';
   const freeList = Object.values(WORKOUTS).filter(w => w.free);
+  const bmi = calcBmi(body.weightKg, body.heightCm);
+  const chip = goalChipText(body);
+  const wLabel = body.weightKg != null
+    ? (body.units === 'imperial' ? kgToLb(body.weightKg) + ' lb' : body.weightKg + ' kg')
+    : null;
   return `<div class="screen fade-in">
     <div class="topbar">
       <div>
         <p class="muted">Ready to Vyrn?</p>
-        <h2>${name}</h2>
+        <h2>${escapeHtml(name)}</h2>
       </div>
       ${currentUser?.isGuest ? '<span class="badge">Guest</span>' : (isPro ? '<span class="badge pro">Pro</span>' : '')}
     </div>
+    ${body.onboardingComplete && (wLabel || chip) ? `
+    <div class="card mb home-metrics" style="padding:12px 14px">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+        <div>
+          ${wLabel ? `<span style="font-weight:700">${wLabel}</span>` : ''}
+          ${bmi != null ? `<span class="muted" style="margin-left:8px;font-size:13px">BMI ${bmi}</span>` : ''}
+        </div>
+        ${chip ? `<span class="goal-chip">${escapeHtml(chip)}</span>` : ''}
+      </div>
+      <button type="button" class="linkish" data-go="progress" style="margin-top:8px;font-size:12px;color:#ff8a7a;background:none;border:none;padding:0;cursor:pointer">View progress →</button>
+    </div>` : (!body.onboardingComplete ? `
+    <div class="card mb" style="padding:12px 14px">
+      <p style="margin:0 0 8px;font-size:14px">Set up your profile to track weight and goals.</p>
+      <button class="btn secondary" data-action="start-onboarding">Complete setup</button>
+    </div>` : '')}
     <div class="stats mb">
       <div class="stat"><div class="num">${stats.today}</div><div class="lbl">Today</div></div>
     <div class="card mb" style="padding:12px 14px">
@@ -2091,6 +2626,7 @@ function renderProfile() {
         : `<button class="btn ghost" data-action="downgrade">Switch to Free (beta)</button>`}
       ${signed ? `<button class="btn secondary mt" data-action="sync-now" style="width:100%;margin-top:8px">Sync now</button>` : ''}
     </div>
+    ${renderBodySettingsCard()}
     <div class="card">
       <h3>Coach</h3>
       <p class="muted mb" style="font-size:13px">Pick your trainer. Cues stay loud, clear, and fired up.</p>
@@ -2132,11 +2668,33 @@ function renderProfile() {
 }
 
 function bindEvents() {
-  $all('[data-go]').forEach(el => el.onclick = (e) => { e.preventDefault(); navigate(el.dataset.go); });
+  $all('[data-go]').forEach(el => el.onclick = (e) => {
+    e.preventDefault();
+    const go = el.dataset.go;
+    if (needsOnboarding() && go !== 'onboarding' && currentScreen === 'onboarding') return;
+    navigate(go);
+  });
   $all('[data-action]').forEach(el => el.onclick = () => handleAction(el.dataset.action, el));
   $all('[data-workout]').forEach(el => el.onclick = () => {
     store.set('selectedWorkout', el.dataset.workout);
     navigate('workoutDetail');
+  });
+  // Live BMI during onboarding height/weight
+  const live = () => {
+    if (currentScreen !== 'onboarding') return;
+    collectObFields();
+    const bmi = calcBmi(obDraft.weightKg, obDraft.heightCm);
+    const cat = bmiCategory(bmi);
+    const box = $('#ob-bmi-box');
+    if (box) {
+      box.innerHTML = `<div class="bmi-num">${bmi != null ? bmi : '—'}</div>
+        <div class="bmi-meta"><strong>BMI ${cat.label}</strong>
+        <p class="muted" style="font-size:12px;margin:4px 0 0">${cat.tip || 'Enter height and weight to see BMI.'}</p></div>`;
+    }
+  };
+  ['ob-height','ob-weight','ob-ft','ob-in'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('input', live);
   });
 }
 
@@ -2215,32 +2773,150 @@ async function handleAction(action, el) {
   el = el || document.querySelector(`[data-action="${action}"]`);
   const msg = $('#auth-msg');
 
+  if (action === 'start-onboarding') {
+    obStep = 0;
+    obDraft = { ...getBody() };
+    if (!obDraft.displayName) obDraft.displayName = displayName() || '';
+    navigate('onboarding');
+    return;
+  }
+  if (action === 'ob-back') {
+    collectObFields();
+    obStep = Math.max(0, obStep - 1);
+    render();
+    return;
+  }
+  if (action === 'ob-next') {
+    collectObFields();
+    const err = validateBodyDraft(obDraft, obStep);
+    const box = $('#ob-msg');
+    if (err !== true) {
+      if (box) box.textContent = err;
+      return;
+    }
+    if (obStep >= 5) {
+      // finish
+      const body = setBody({
+        ...obDraft,
+        onboardingComplete: true
+      });
+      if (body.weightKg) logWeight(body.weightKg, todayKey());
+      syncBodyCloud();
+      obDraft = null;
+      navigate('home');
+      return;
+    }
+    obStep += 1;
+    render();
+    return;
+  }
+  if (action === 'ob-sex') {
+    obDraft = obDraft || { ...getBody() };
+    obDraft.sex = el.dataset.val;
+    render();
+    return;
+  }
+  if (action === 'ob-units') {
+    collectObFields();
+    obDraft = obDraft || { ...getBody() };
+    obDraft.units = el.dataset.val;
+    render();
+    return;
+  }
+  if (action === 'ob-activity') {
+    obDraft = obDraft || { ...getBody() };
+    obDraft.activityLevel = el.dataset.val;
+    render();
+    return;
+  }
+  if (action === 'ob-goal') {
+    collectObFields();
+    obDraft = obDraft || { ...getBody() };
+    obDraft.goal = el.dataset.val;
+    render();
+    return;
+  }
+  if (action === 'ob-style') {
+    obDraft = obDraft || { ...getBody() };
+    const id = el.dataset.val;
+    const set = new Set(obDraft.trainingStyles || []);
+    if (set.has(id)) set.delete(id); else set.add(id);
+    obDraft.trainingStyles = [...set];
+    render();
+    return;
+  }
+  if (action === 'progress-range') {
+    progressRange = el.dataset.val || '30d';
+    render();
+    return;
+  }
+  if (action === 'log-weight') {
+    const input = $('#log-weight-input');
+    const body = getBody();
+    let kg = input ? Number(input.value) : NaN;
+    if (body.units === 'imperial') kg = lbToKg(kg);
+    const res = logWeight(kg);
+    if (!res.ok) { alert(res.error); return; }
+    render();
+    return;
+  }
+  if (action === 'set-units') {
+    setBody({ units: el.dataset.val });
+    render();
+    return;
+  }
+  if (action === 'save-body') {
+    const body = getBody();
+    const units = body.units || 'metric';
+    let heightCm = body.heightCm, weightKg = body.weightKg;
+    if (units === 'metric') {
+      const h = $('#set-height'); const w = $('#set-weight');
+      if (h && h.value) heightCm = Number(h.value);
+      if (w && w.value) weightKg = Number(w.value);
+    } else {
+      const ft = $('#set-ft'); const inch = $('#set-in'); const w = $('#set-weight');
+      if (ft && ft.value !== '') heightCm = ftInToCm(ft.value, inch ? inch.value : 0);
+      if (w && w.value) weightKg = lbToKg(w.value);
+    }
+    if (!(heightCm >= 100 && heightCm <= 250)) { alert('Height should be 100–250 cm'); return; }
+    if (!(weightKg >= 30 && weightKg <= 300)) { alert('Weight should be 30–300 kg'); return; }
+    const activity = ($('#set-activity') || {}).value || body.activityLevel;
+    const goal = ($('#set-goal') || {}).value || body.goal;
+    setBody({ heightCm, weightKg, activityLevel: activity, goal, onboardingComplete: true });
+    logWeight(weightKg);
+    syncBodyCloud();
+    alert('Metrics saved');
+    render();
+    return;
+  }
+
+
   if (action === 'guest') {
     store.set('guest', { email: 'guest@vyrn.app', id: 'guest' });
     currentUser = { id: 'guest', email: 'guest@vyrn.app', isGuest: true };
     isPro = false; store.set('isPro', false);
-    navigate('home');
+    enterAppHome();
     return;
   }
   if (action === 'demo-free') {
     store.set('guest', { email: 'free@vyrn.demo', id: 'demo-free' });
     currentUser = { id: 'demo-free', email: 'free@vyrn.demo', isGuest: true };
     isPro = false; store.set('isPro', false);
-    navigate('home');
+    enterAppHome();
     return;
   }
   if (action === 'demo-pro') {
     store.set('guest', { email: 'pro@vyrn.demo', id: 'demo-pro' });
     currentUser = { id: 'demo-pro', email: 'pro@vyrn.demo', isGuest: true };
     isPro = true; store.set('isPro', true);
-    navigate('home');
+    enterAppHome();
     return;
   }
   if (action === 'demo-pro2') {
     store.set('guest', { email: 'pro2@vyrn.demo', id: 'demo-pro-2' });
     currentUser = { id: 'demo-pro-2', email: 'pro2@vyrn.demo', isGuest: true };
     isPro = true; store.set('isPro', true);
-    navigate('home');
+    enterAppHome();
     return;
   }
 
@@ -2290,7 +2966,7 @@ async function handleAction(action, el) {
     if (!supabaseClient) {
       store.set('guest', { email });
       currentUser = { id: 'local', email, isGuest: true };
-      navigate('home');
+      enterAppHome();
       return;
     }
     try {
@@ -2302,7 +2978,7 @@ async function handleAction(action, el) {
           await applyEntitlements();
           await ensureProfile();
           if (msg) msg.textContent = 'Account created — you are signed in.';
-          navigate('home');
+          enterAppHome();
         } else {
           if (msg) msg.textContent = 'Account created. Check your email to confirm, then Sign In.';
         }
@@ -2320,7 +2996,7 @@ async function handleAction(action, el) {
         await applyEntitlements();
         await ensureProfile();
         await pullCloudHistory();
-        navigate('home');
+        enterAppHome();
       }
     } catch (e) {
       if (msg) msg.textContent = e.message || 'Auth error';
@@ -2546,7 +3222,7 @@ async function handleAction(action, el) {
     clearInterval(tickTimer);
     window.speechSynthesis?.cancel();
     activeWorkout = null;
-    navigate('home');
+    enterAppHome();
     return;
   }
 
