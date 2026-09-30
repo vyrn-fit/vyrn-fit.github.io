@@ -689,9 +689,9 @@ const EXERCISE_GUIDE = {
   "Bodyweight squats": { type: "cdn", key: "bodyweight-squat" },
   "Broad jumps (or long steps)": { type: "cdn", key: "jump-squat" },
   "Burpees": { type: "cdn", key: "burpee" },
-  "Calf raises": { type: "cdn", key: "wall-sit" },
+  "Calf raises": { type: "cdn", key: "step-up" },
   "Calf raises on curb": { type: "cdn", key: "step-up" },
-  "Chin tucks": { type: "cdn", key: "reverse-snow-angel" },
+  "Chin tucks": { type: "cdn", key: "face-pull" },
   "Cool-down stretch": { type: "cdn", key: "worlds-greatest-stretch" },
   "Cool-down walk": { type: "cdn", key: "high-knees" },
   "Cool-down walk in place": { type: "cdn", key: "high-knees" },
@@ -711,7 +711,7 @@ const EXERCISE_GUIDE = {
   "Hamstring fold": { type: "cdn", key: "toe-touch" },
   "High knees": { type: "cdn", key: "high-knees" },
   "High knees (or marches)": { type: "cdn", key: "high-knees" },
-  "Hip circles": { type: "cdn", key: "worlds-greatest-stretch" },
+  "Hip circles": { type: "cdn", key: "high-knees" },
   "Hip flexor stretch L": { type: "cdn", key: "kneeling-hip-flexor-stretch" },
   "Hip flexor stretch R": { type: "cdn", key: "kneeling-hip-flexor-stretch" },
   "Hollow hold (or tuck)": { type: "cdn", key: "hollow-body-hold" },
@@ -727,7 +727,7 @@ const EXERCISE_GUIDE = {
   "March or jog in place": { type: "cdn", key: "high-knees" },
   "Mountain Climbers": { type: "cdn", key: "mountain-climber" },
   "Mountain climbers": { type: "cdn", key: "mountain-climber" },
-  "Neck & shoulder rolls": { type: "cdn", key: "reverse-snow-angel" },
+  "Neck & shoulder rolls": { type: "cdn", key: "arm-circles" },
   "Park-bench step-ups": { type: "cdn", key: "step-up" },
   "Pike push-ups (or wall)": { type: "cdn", key: "pike-push-up" },
   "Plank": { type: "cdn", key: "plank" },
@@ -739,7 +739,7 @@ const EXERCISE_GUIDE = {
   "Reverse lunges": { type: "cdn", key: "reverse-lunge" },
   "Reverse tabletop holds": { type: "cdn", key: "glute-bridge" },
   "Seated cat-cow": { type: "cdn", key: "cat-cow-stretch" },
-  "Seated thoracic openers": { type: "cdn", key: "cat-cow-stretch" },
+  "Seated thoracic openers": { type: "cdn", key: "doorway-chest-stretch" },
   "Seated torso twists": { type: "cdn", key: "russian-twist" },
   "Shoulder CARs slow": { type: "cdn", key: "arm-circles" },
   "Shoulder blade squeezes": { type: "cdn", key: "face-pull" },
@@ -749,13 +749,13 @@ const EXERCISE_GUIDE = {
   "Single-leg glute bridge L": { type: "cdn", key: "glute-bridge" },
   "Single-leg glute bridge R": { type: "cdn", key: "glute-bridge" },
   "Slow mountain climbers": { type: "cdn", key: "mountain-climber" },
-  "Slow neck rolls": { type: "cdn", key: "reverse-snow-angel" },
+  "Slow neck rolls": { type: "cdn", key: "arm-circles" },
   "Sprint or fast walk intervals": { type: "cdn", key: "high-knees" },
   "Squat jumps (or squats)": { type: "cdn", key: "jump-squat" },
   "Squat pulses": { type: "cdn", key: "bodyweight-squat" },
   "Squats": { type: "cdn", key: "bodyweight-squat" },
   "Standing chest opener": { type: "cdn", key: "doorway-chest-stretch" },
-  "Standing hip circles": { type: "cdn", key: "lateral-lunge" },
+  "Standing hip circles": { type: "cdn", key: "worlds-greatest-stretch" },
   "Standing marches": { type: "cdn", key: "high-knees" },
   "Standing side bends": { type: "cdn", key: "lateral-lunge" },
   "Standing toe reaches": { type: "cdn", key: "toe-touch" },
@@ -919,8 +919,11 @@ function wgImgError(el, slug, frame) {
     }
   } catch (_) {}
   el.onerror = null;
+  el.removeAttribute('crossorigin');
   el.src = wgPlaceholderDataUri();
   el.classList.add('wg-fallback');
+  el.style.opacity = '1';
+  el.style.visibility = 'visible';
 }
 
 
@@ -1027,9 +1030,9 @@ function guideSlugForPreview(name) {
 /** Uniform square thumb — same line-art + frame as the workout player */
 function iconFor(name) {
   const slug = guideSlugForPreview(name);
+  // Prefer local /assets/wg first; no crossorigin (avoids silent CORS blanks on GH Pages)
   return `<span class="ex-thumb" data-wg="${slug}" aria-hidden="true">
-    <img data-cdn="0" src="${wgFrameUrl(slug, 2, 0)}" alt="" loading="lazy" decoding="async" width="64" height="64"
-      referrerpolicy="no-referrer" crossorigin="anonymous"
+    <img data-cdn="0" src="${wgFrameUrl(slug, 2, 0)}" alt="" loading="eager" decoding="async" width="64" height="64"
       onerror="wgImgError(this,'${slug}',2)" />
   </span>`;
 }
@@ -1037,7 +1040,8 @@ function iconSvg(name, sizeClass) {
   if (sizeClass && sizeClass.includes('lg')) {
     const slug = guideSlugForPreview(name);
     return `<span class="ex-thumb ex-thumb-lg" data-wg="${slug}">
-      <img src="${wgFrameUrl(slug, 2)}" alt="" decoding="async" />
+      <img data-cdn="0" src="${wgFrameUrl(slug, 2, 0)}" alt="" decoding="async" width="200" height="200"
+        onerror="wgImgError(this,'${slug}',2)" />
     </span>`;
   }
   return iconFor(name);
@@ -1435,20 +1439,21 @@ function speak(text, opts) {
         u.lang = 'en-US';
       }
       // Enthusiastic but not chipmunk: slight lift in rate + pitch
+      // Slightly slower = less robotic on mobile system voices
       if (mode === 'hype') {
         if (trainerGender === 'female') {
-          u.rate = 1.08;
-          u.pitch = 1.12;
+          u.rate = 1.02;
+          u.pitch = 1.08;
         } else {
-          u.rate = 1.06;
-          u.pitch = 1.02;
+          u.rate = 1.0;
+          u.pitch = 0.98;
         }
       } else if (mode === 'rest') {
-        u.rate = 0.98;
-        u.pitch = trainerGender === 'female' ? 1.06 : 1.0;
+        u.rate = 0.94;
+        u.pitch = trainerGender === 'female' ? 1.04 : 0.96;
       } else {
-        u.rate = 1.02;
-        u.pitch = trainerGender === 'female' ? 1.08 : 1.0;
+        u.rate = 0.98;
+        u.pitch = trainerGender === 'female' ? 1.05 : 0.98;
       }
       // First chunk a touch brighter
       if (i === 0 && mode === 'hype') u.rate = Math.min(1.12, u.rate + 0.03);
