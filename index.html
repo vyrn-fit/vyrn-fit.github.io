@@ -45,7 +45,7 @@
       --card: #141414;
       --border: #262626;
       --text: #fafafa;
-      --muted: #a3a3a3;
+      --muted: #b5b5b5;
       --dim: #737373;
       --green: #ff3b2f;
       --accent: #ff6b35;
@@ -268,7 +268,7 @@
       font-family: inherit; transition: transform 0.12s, opacity 0.12s, background 0.15s;
     }
     .btn:active { transform: scale(0.98); }
-    .btn.primary { background: var(--green); color: #000; }
+    .btn.primary { background: var(--green); color: #fff; font-weight: 700; }
     .btn.primary:hover { background: var(--green-dim); }
     .btn.secondary { background: transparent; color: var(--green); border: 1px solid var(--border); }
     .btn.ghost { background: transparent; color: var(--muted); }
@@ -1220,14 +1220,17 @@
       box-shadow: 0 0 0 1px rgba(255,255,255,0.03) inset;
     }
     .ex-thumb img {
-      width: 78%;
-      height: 78%;
+      width: 82%;
+      height: 82%;
       object-fit: contain;
       object-position: center;
-      filter:
-        brightness(0) invert(1)
-        drop-shadow(0 0 6px rgba(255, 59, 47, 0.25));
+      /* Frames are already light line-art — do not invert (was causing blank thumbs) */
+      filter: drop-shadow(0 0 8px rgba(255, 59, 47, 0.35));
       display: block;
+      opacity: 1;
+      visibility: visible;
+      min-width: 24px;
+      min-height: 24px;
     }
     .list-btn .ex-thumb,
     .ex-item .ex-thumb {
@@ -1331,8 +1334,7 @@
     }
     img.wg-frame {
       filter:
-        brightness(0) invert(1)
-        drop-shadow(0 0 10px rgba(255, 59, 47, 0.3))
+        drop-shadow(0 0 12px rgba(255, 59, 47, 0.4))
         drop-shadow(0 4px 14px rgba(0,0,0,0.35));
     }
     .wg-frame.f1 { animation: wgCycle 2.4s ease-in-out infinite; }
